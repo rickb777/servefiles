@@ -37,19 +37,15 @@
   supported, but might be added in future.
 
 
-  Example Usage
+  Path Stripping
 
-  Choose any expiry age you like, although ten years seems to work well.
-  To serve files with a ten-year expiry, this creates a suitably-configured handler:
+  The Assets handler can optionally strip some path segments from the URL before selecting the asset to be served.
 
-      assets := servefiles.AssetHandler( 1, "./assets/", 10 * 365 * 24 * time.Hour )
-
-  Notice here the first parameter is 1 instead of the default, 0. So the first segment of the URL path gets
-  discarded. This means, for example, that the URL
+  This means, for example, that the URL
 
       http://example.com/e3b1cf/css/style1.css
 
-  maps to the asset files
+  can map to the asset files
 
       ./assets/css/style1.css
       ./assets/css/style1.css.gz
@@ -58,7 +54,22 @@
   for example each time your server starts). Each time that number changes, browsers will see the asset files as
   being new, and they will later drop old versions from their cache regardless of their ten-year lifespan.
 
-  So you get the ten-year lifespan combined with being able to push out changed assets when you need to.
+  So you get the far-future lifespan combined with being able to push out changed assets when you need to.
+
+
+  Example Usage
+
+  To serve files with a ten-year expiry, this creates a suitably-configured handler:
+
+      assets := servefiles.AssetHandler( 1, "./assets/", 10 * 365 * 24 * time.Hour )
+
+  Notice here the first parameter is 1 instead of the default, 0. So the first segment of the URL path gets
+  discarded. A larger number is permitted.
+
+  The second parameter names the local directory that holds the asset files. It can be relative or absolute.
+
+  The third parameter is the maximum age to be specified in the cache-control headers. It can be any duration
+  from zero upwards.
 */
 package servefiles
 
