@@ -1,4 +1,4 @@
-package httputil
+package servefiles
 
 import (
 	"net/http"

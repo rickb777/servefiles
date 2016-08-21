@@ -1,12 +1,4 @@
-// Provides a static asset handler for serving files such as images, stylesheets and javascript code. Care is taken
-// to set headers such that the assets will be efficiently cached by browsers and proxies.
-//
-// The 'far-future' technique can be used. Set a long expiry time, e.g. time.Hour * 24 * 3650
-//
-// No in-memory caching is performed server-side. This is less necessary due to far-future caching being supported,
-// but might be added in future.
-
-package httputil
+package servefiles
 
 import (
 	"errors"
@@ -137,6 +129,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (resource
 	return resource, 0, ""
 }
 
+// ServeHTTP implements the http.Handler interface.
 func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resource, code, message := a.chooseResource(w.Header(), req)
 	if code >= 400 {
