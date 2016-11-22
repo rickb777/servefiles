@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2016 Rick Beton
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package servefiles
 
 import (
@@ -71,7 +93,7 @@ func (a *Assets) expires() string {
 }
 
 func (a *Assets) removeUnwantedSegments(path string) string {
-	//log.Printf("mapUrlToAssetPath %s", path)
+	//log.Printf("removeUnwantedSegments %s", path)
 	for i := a.UnwantedPrefixSegments; i >= 0; i-- {
 		slash := strings.IndexByte(path, '/') + 1
 		if slash > 0 {
@@ -91,8 +113,17 @@ func listContainsWholeString(header, want string) bool {
 	return false
 }
 
-func (a *Assets) chooseResource(header http.Header, req *http.Request) (resource string, code int, message string) {
-	resource = a.AssetPath + a.removeUnwantedSegments(req.URL.Path)
+func checkPlainResource(resource string, header http.Header) string {
+	d, err := os.Stat(resource)
+	if err == nil {
+		// strong etag because the representation is the original file
+		header.Set("ETag", fmt.Sprintf(`"%x-%x"`, d.ModTime().Unix(), d.Size()))
+	}
+	return resource
+}
+
+func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, int, string) {
+	resource := a.AssetPath + a.removeUnwantedSegments(req.URL.Path)
 	gzipped := resource + ".gz"
 
 	if a.MaxAge > 0 {
@@ -100,8 +131,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (resource
 		header.Set("Cache-Control", fmt.Sprintf("public, maxAge=%d", a.MaxAge / time.Second))
 	}
 
-
-	_, err := os.Stat(gzipped)
+	d, err := os.Stat(gzipped)
 	if err == nil {
 		// gzipped file exists and is readable
 		acceptEncoding, ok := req.Header["Accept-Encoding"]
@@ -112,21 +142,23 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (resource
 				header.Set("Content-Type", mime.TypeByExtension(ext))
 				header.Set("Content-Encoding", "gzip")
 				header.Add("Vary", "Accept-Encoding")
+				// weak etag because the representation is not the original file but a compressed variant
+				header.Set("ETag", fmt.Sprintf(`W/"%x-%x"`, d.ModTime().Unix(), d.Size()))
 				return gzipped, 0, ""
 			}
 		}
 
 	} else if os.IsNotExist(err) {
 		// gzipped does not exist; original might but this gets checked later
-		return resource, 0, ""
+		return checkPlainResource(resource, header), 0, ""
 
 	} else if os.IsPermission(err) {
 		// incorrectly assembled gzipped asset is treated as an error
 		return resource, http.StatusForbidden, "403 Forbidden"
 	}
 
-	// no intervention; the file will be served by
-	return resource, 0, ""
+	// no intervention; the file will be served normally by the standard api
+	return checkPlainResource(resource, header), 0, ""
 }
 
 // ServeHTTP implements the http.Handler interface.

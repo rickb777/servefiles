@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2016 Rick Beton
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package servefiles
 
 import (
@@ -7,6 +29,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"fmt"
+	"strings"
 )
 
 var emptyStrings []string
@@ -21,15 +45,15 @@ func init() {
 func TestMapper(t *testing.T) {
 	a0 := AssetHandler(0, "./assets/", time.Hour)
 	p0 := a0.removeUnwantedSegments("/a/b/c/x.png")
-	isEqual(t, p0, "a/b/c/x.png")
+	isEqual(t, p0, "a/b/c/x.png", "a/b/c/x.png")
 
 	a1 := AssetHandler(1, "./assets/", time.Hour)
 	p1 := a1.removeUnwantedSegments("/a/b/c/x.png")
-	isEqual(t, p1, "b/c/x.png")
+	isEqual(t, p1, "b/c/x.png", "b/c/x.png")
 
 	a2 := AssetHandler(2, "./assets/", time.Hour)
 	p2 := a2.removeUnwantedSegments("/a/b/c/x.png")
-	isEqual(t, p2, "c/x.png")
+	isEqual(t, p2, "c/x.png", "c/x.png")
 }
 
 func TestSimpleNoGzip(t *testing.T) {
@@ -43,18 +67,20 @@ func TestSimpleNoGzip(t *testing.T) {
 	}
 
 	for _, test := range cases {
+		etag := etag(test.path)
 		url := mustUrl(test.url)
 		request := &http.Request{Method: "GET", URL: url}
 		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
-		isEqual(t, code, 0)
-		isEqual(t, message, "")
-		isEqual(t, len(headers["Expires"]), 1)
-		isGt(t, len(headers["Expires"][0]), 25)
+		isEqual(t, code, 0, test.path)
+		isEqual(t, message, "", test.path)
+		isEqual(t, len(headers["Expires"]), 1, test.path)
+		isGt(t, len(headers["Expires"][0]), 25, test.path)
 		//fmt.Println(headers["Expires"])
-		isEqual(t, resource, test.path)
-		isEqual(t, headers["Cache-Control"], []string{test.cacheControl})
+		isEqual(t, resource, test.path, test.path)
+		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
+		isEqual(t, headers["Etag"], []string{etag}, test.path)
 	}
 }
 
@@ -75,14 +101,13 @@ func TestSimpleNonExistent(t *testing.T) {
 		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
-		isEqual(t, code, 0)
-		isEqual(t, message, "")
-		isEqual(t, len(headers), 2)
-		isEqual(t, headers["Cache-Control"], []string{test.cacheControl})
-		isEqual(t, len(headers["Expires"]), 1)
-		isGt(t, len(headers["Expires"][0]), 25)
-		//fmt.Println(headers["Expires"])
-		isEqual(t, resource, test.path)
+		isEqual(t, code, 0, test.path)
+		isEqual(t, message, "", test.path)
+		isEqual(t, len(headers), 2, test.path)
+		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
+		isEqual(t, len(headers["Expires"]), 1, test.path)
+		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isEqual(t, resource, test.path, test.path)
 	}
 }
 
@@ -99,22 +124,24 @@ func TestPathWithGzipAndGzipWithAcceptHeader(t *testing.T) {
 	}
 
 	for _, test := range cases {
+		etag := etag(test.path)
 		url := mustUrl(test.url)
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
-		isEqual(t, code, 0)
-		isEqual(t, message, "")
-		isEqual(t, len(headers), 5)
-		isEqual(t, headers["Cache-Control"], []string{test.cacheControl})
-		isEqual(t, headers["Content-Type"], []string{test.mime})
-		isEqual(t, headers["Content-Encoding"], []string{"gzip"})
-		isEqual(t, headers["Vary"], []string{"Accept-Encoding"})
-		isEqual(t, len(headers["Expires"]), 1)
-		isGt(t, len(headers["Expires"][0]), 25)
-		isEqual(t, resource, test.path)
+		isEqual(t, code, 0, test.path)
+		isEqual(t, message, "", test.path)
+		isEqual(t, len(headers), 6, test.path)
+		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
+		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
+		isEqual(t, headers["Content-Encoding"], []string{"gzip"}, test.path)
+		isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, test.path)
+		isEqual(t, headers["Etag"], []string{etag}, test.path)
+		isEqual(t, len(headers["Expires"]), 1, test.path)
+		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isEqual(t, resource, test.path, test.path)
 	}
 }
 
@@ -131,22 +158,24 @@ func TestPathWithGzipAndGzipNoAcceptHeader(t *testing.T) {
 	}
 
 	for _, test := range cases {
+		etag := etag(test.path)
 		url := mustUrl(test.url)
 		header := newHeader("Accept-Encoding", "xxx, yyy, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
-		isEqual(t, code, 0)
-		isEqual(t, message, "")
-		isEqual(t, len(headers), 2)
-		isEqual(t, headers["Cache-Control"], []string{test.cacheControl})
-		isEqual(t, headers["Content-Type"], emptyStrings)
-		isEqual(t, headers["Content-Encoding"], emptyStrings)
-		isEqual(t, headers["Vary"], emptyStrings)
-		isEqual(t, len(headers["Expires"]), 1)
-		isGt(t, len(headers["Expires"][0]), 25)
-		isEqual(t, resource, test.path)
+		isEqual(t, code, 0, test.path)
+		isEqual(t, message, "", test.path)
+		isEqual(t, len(headers), 3, test.path)
+		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
+		isEqual(t, headers["Content-Type"], emptyStrings, test.path)
+		isEqual(t, headers["Content-Encoding"], emptyStrings, test.path)
+		isEqual(t, headers["Vary"], emptyStrings, test.path)
+		isEqual(t, headers["Etag"], []string{etag}, test.path)
+		isEqual(t, len(headers["Expires"]), 1, test.path)
+		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isEqual(t, resource, test.path, test.path)
 	}
 }
 
@@ -165,22 +194,24 @@ func TestPathWithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 	}
 
 	for _, test := range cases {
+		etag := etag(test.path)
 		url := mustUrl(test.url)
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
-		isEqual(t, code, 0)
-		isEqual(t, message, "")
-		isEqual(t, len(headers), 2)
-		isEqual(t, headers["Cache-Control"], []string{test.cacheControl})
-		isEqual(t, headers["Content-Type"], emptyStrings)
-		isEqual(t, headers["Content-Encoding"], emptyStrings)
-		isEqual(t, headers["Vary"], emptyStrings)
-		isEqual(t, len(headers["Expires"]), 1)
-		isGt(t, len(headers["Expires"][0]), 25)
-		isEqual(t, resource, test.path)
+		isEqual(t, code, 0, test.path)
+		isEqual(t, message, "", test.path)
+		isEqual(t, len(headers), 3, test.path)
+		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
+		isEqual(t, headers["Content-Type"], emptyStrings, test.path)
+		isEqual(t, headers["Content-Encoding"], emptyStrings, test.path)
+		isEqual(t, headers["Vary"], emptyStrings, test.path)
+		isEqual(t, headers["Etag"], []string{etag}, test.path)
+		isEqual(t, len(headers["Expires"]), 1, test.path)
+		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isEqual(t, resource, test.path, test.path)
 	}
 }
 
@@ -208,15 +239,15 @@ func BenchmarkPathWithoutGzip(t *testing.B) {
 	}
 }
 
-func isEqual(t *testing.T, a, b interface{}) {
+func isEqual(t *testing.T, a, b, hint interface{}) {
 	if !reflect.DeepEqual(a, b) {
-		t.Errorf("Got %#v; expected %#v\n", a, b)
+		t.Errorf("Got %#v; expected %#v - at %v\n", a, b, hint)
 	}
 }
 
-func isGt(t *testing.T, a, b int) {
+func isGt(t *testing.T, a, b int, hint interface{}) {
 	if a <= b {
-		t.Errorf("Got %d; expected greater than %d\n", a, b)
+		t.Errorf("Got %d; expected greater than %d - at %v\n", a, b, hint)
 	}
 }
 
@@ -237,4 +268,21 @@ func must(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func mustStat(name string) os.FileInfo {
+	d, err := os.Stat(name)
+	if err != nil {
+		panic(err)
+	}
+	return d
+}
+
+func etag(name string) string {
+	d := mustStat(name)
+	t := ""
+	if strings.HasSuffix(name, ".gz") {
+		t = "W/" // weak etag
+	}
+	return fmt.Sprintf(`%s"%x-%x"`, t, d.ModTime().Unix(), d.Size())
 }

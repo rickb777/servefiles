@@ -1,3 +1,25 @@
+// MIT License
+//
+// Copyright (c) 2016 Rick Beton
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 /*
   Package `servefiles` provides a static asset handler for serving files such as images, stylesheets and
   javascript code. This is an enhancement to the standard net/http ServeFiles, which is used internally.
@@ -8,7 +30,7 @@
   Assets is an http.Handler and can be used alongside your other handlers.
 
 
-  Gzipping
+  Gzipped Content
 
   The Assets handler serves gzipped content when the browser indicates it can accept it. But it does not
   gzip anything on-the-fly. Nor does it create any gzipped files for you.
@@ -33,7 +55,7 @@
   Browsers will cache such assets and not make requests for them for the next ten years (or whatever). Not even
   conditional requests are made. There is clearly a big benefit in page load times after the first visit.
 
-  No in-memory caching is performed server-side. This is less needed due to far-future caching being
+  No in-memory caching is performed server-side. This is needed less due to far-future caching being
   supported, but might be added in future.
 
 
@@ -50,7 +72,7 @@
       ./assets/css/style1.css
       ./assets/css/style1.css.gz
 
-  without the e3b1cf segment. The benefit of this is that you can use a unique number or hash in that segment (chosen
+  without the /e3b1cf/ segment. The benefit of this is that you can use a unique number or hash in that segment (chosen
   for example each time your server starts). Each time that number changes, browsers will see the asset files as
   being new, and they will later drop old versions from their cache regardless of their ten-year lifespan.
 
