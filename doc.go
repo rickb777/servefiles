@@ -44,13 +44,26 @@
 
   You should not attempt to gzip already-compressed files, such as PNG, JPEG, SVGZ, etc.
 
-  Very small files gain little from compression because they may be small enough to fit within a single TCP packet,
-  so don't bother with them. (They might even grow in size when gzipped.)
+  Very small files (e.g. less than 1kb) gain little from compression because they may be small enough to fit
+  within a single TCP packet, so don't bother with them. (They might even grow in size when gzipped.)
+
+
+  Conditional Request Support
+
+  The Assets handler sets 'Etag' headers for the responses of the assets it finds. Modern browsers need this: they
+  are then able to send conditional requests that very often shrink responses to a simple 304 Not Modified. This
+  improves the experience for users and leaves your server free to do more of other things.
+
+  The Etag value is calculated from the file size and modification timestamp, a commonly used approach. Strong
+  or weak tags are used for plain or gzipped files respectively (the reason is that a given file can be
+  compressed with different levels of compression, a weak Etag indicates there is not a strict match for the
+  file's content).
 
 
   Cache Control
 
-  The 'far-future' technique can and should be used. Set a long expiry time, e.g. time.Hour * 24 * 365 * 10
+  To go even further, the 'far-future' technique can and should be used. Set a long expiry time, e.g.
+  time.Hour * 24 * 365 * 10.
 
   Browsers will cache such assets and not make requests for them for the next ten years (or whatever). Not even
   conditional requests are made. There is clearly a big benefit in page load times after the first visit.

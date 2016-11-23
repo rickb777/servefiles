@@ -23,14 +23,14 @@
 package servefiles
 
 import (
+	"fmt"
 	"net/http"
 	. "net/url"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
-	"fmt"
-	"strings"
 )
 
 var emptyStrings []string
@@ -43,23 +43,63 @@ func init() {
 }
 
 func TestMapper(t *testing.T) {
-	a0 := AssetHandler(0, "./assets/", time.Hour)
-	p0 := a0.removeUnwantedSegments("/a/b/c/x.png")
-	isEqual(t, p0, "a/b/c/x.png", "a/b/c/x.png")
+	cases := []struct {
+		n               int
+		input, expected string
+	}{
+		{0, "/a/b/c/x.png", "a/b/c/x.png"},
+		{1, "/a/b/c/x.png", "b/c/x.png"},
+		{2, "/a/b/c/x.png", "c/x.png"},
+		{3, "/a/b/c/x.png", "x.png"},
+		{3, "/a/b/c/", ""},
+	}
 
-	a1 := AssetHandler(1, "./assets/", time.Hour)
-	p1 := a1.removeUnwantedSegments("/a/b/c/x.png")
-	isEqual(t, p1, "b/c/x.png", "b/c/x.png")
+	for _, test := range cases {
+		a := AssetHandler(test.n, "./assets/", time.Hour)
+		p0 := a.removeUnwantedSegments(test.input)
+		isEqual(t, p0, test.expected, test.input)
+	}
+}
 
-	a2 := AssetHandler(2, "./assets/", time.Hour)
-	p2 := a2.removeUnwantedSegments("/a/b/c/x.png")
-	isEqual(t, p2, "c/x.png", "c/x.png")
+func TestDirs(t *testing.T) {
+	cases := []struct {
+		n                       int
+		expectEtag              bool
+		url, path, cacheControl string
+	}{
+		{0, true, "http://localhost:8001/", "assets/", "public, maxAge=1"},
+		{0, false, "http://localhost:8001/img/", "assets/img/", "public, maxAge=1"},
+	}
+
+	for _, test := range cases {
+		etag := ""
+		if test.expectEtag {
+			etag = etagFor(test.path + "index.html")
+		}
+		url := mustUrl(test.url)
+		request := &http.Request{Method: "GET", URL: url}
+		a := AssetHandler(test.n, "./assets/", time.Second)
+		headers := make(http.Header)
+		resource, code, message := a.chooseResource(headers, request)
+		isEqual(t, code, 0, test.path)
+		isEqual(t, message, "", test.path)
+		isEqual(t, len(headers["Expires"]), 1, test.path)
+		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		//fmt.Println(headers["Expires"])
+		isEqual(t, resource, test.path+"index.html", test.path)
+		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
+		if test.expectEtag {
+			isEqual(t, headers["Etag"], []string{etag}, test.path)
+		} else {
+			isEqual(t, headers["Etag"], emptyStrings, test.path)
+		}
+	}
 }
 
 func TestSimpleNoGzip(t *testing.T) {
 	cases := []struct {
-		n int
-		maxAge time.Duration
+		n                       int
+		maxAge                  time.Duration
 		url, path, cacheControl string
 	}{
 		{0, 1, "http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=1"},
@@ -67,10 +107,10 @@ func TestSimpleNoGzip(t *testing.T) {
 	}
 
 	for _, test := range cases {
-		etag := etag(test.path)
+		etag := etagFor(test.path)
 		url := mustUrl(test.url)
 		request := &http.Request{Method: "GET", URL: url}
-		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
+		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -86,8 +126,8 @@ func TestSimpleNoGzip(t *testing.T) {
 
 func TestSimpleNonExistent(t *testing.T) {
 	cases := []struct {
-		n int
-		maxAge time.Duration
+		n                       int
+		maxAge                  time.Duration
 		url, path, cacheControl string
 	}{
 		{0, 1, "http://localhost:8001/img/nonexisting.png", "assets/img/nonexisting.png", "public, maxAge=1"},
@@ -98,7 +138,7 @@ func TestSimpleNonExistent(t *testing.T) {
 	for _, test := range cases {
 		url := mustUrl(test.url)
 		request := &http.Request{Method: "GET", URL: url}
-		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
+		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -113,8 +153,8 @@ func TestSimpleNonExistent(t *testing.T) {
 
 func TestPathWithGzipAndGzipWithAcceptHeader(t *testing.T) {
 	cases := []struct {
-		n int
-		maxAge time.Duration
+		n                             int
+		maxAge                        time.Duration
 		url, mime, path, cacheControl string
 	}{
 		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "assets/css/style1.css.gz", "public, maxAge=1"},
@@ -124,11 +164,11 @@ func TestPathWithGzipAndGzipWithAcceptHeader(t *testing.T) {
 	}
 
 	for _, test := range cases {
-		etag := etag(test.path)
+		etag := etagFor(test.path)
 		url := mustUrl(test.url)
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
-		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
+		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -147,8 +187,8 @@ func TestPathWithGzipAndGzipWithAcceptHeader(t *testing.T) {
 
 func TestPathWithGzipAndGzipNoAcceptHeader(t *testing.T) {
 	cases := []struct {
-		n int
-		maxAge time.Duration
+		n                       int
+		maxAge                  time.Duration
 		url, path, cacheControl string
 	}{
 		{0, 1, "http://localhost:8001/css/style1.css", "assets/css/style1.css", "public, maxAge=1"},
@@ -158,11 +198,11 @@ func TestPathWithGzipAndGzipNoAcceptHeader(t *testing.T) {
 	}
 
 	for _, test := range cases {
-		etag := etag(test.path)
+		etag := etagFor(test.path)
 		url := mustUrl(test.url)
 		header := newHeader("Accept-Encoding", "xxx, yyy, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
-		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
+		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -181,8 +221,8 @@ func TestPathWithGzipAndGzipNoAcceptHeader(t *testing.T) {
 
 func TestPathWithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 	cases := []struct {
-		n int
-		maxAge time.Duration
+		n                       int
+		maxAge                  time.Duration
 		url, path, cacheControl string
 	}{
 		{0, 1, "http://localhost:8001/css/style2.css", "assets/css/style2.css", "public, maxAge=1"},
@@ -194,11 +234,11 @@ func TestPathWithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 	}
 
 	for _, test := range cases {
-		etag := etag(test.path)
+		etag := etagFor(test.path)
 		url := mustUrl(test.url)
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
-		a := AssetHandler(test.n, "./assets/", test.maxAge * time.Second)
+		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -241,13 +281,13 @@ func BenchmarkPathWithoutGzip(t *testing.B) {
 
 func isEqual(t *testing.T, a, b, hint interface{}) {
 	if !reflect.DeepEqual(a, b) {
-		t.Errorf("Got %#v; expected %#v - at %v\n", a, b, hint)
+		t.Errorf("Got %#v; expected %#v - for %v\n", a, b, hint)
 	}
 }
 
 func isGt(t *testing.T, a, b int, hint interface{}) {
 	if a <= b {
-		t.Errorf("Got %d; expected greater than %d - at %v\n", a, b, hint)
+		t.Errorf("Got %d; expected greater than %d - for %v\n", a, b, hint)
 	}
 }
 
@@ -278,7 +318,7 @@ func mustStat(name string) os.FileInfo {
 	return d
 }
 
-func etag(name string) string {
+func etagFor(name string) string {
 	d := mustStat(name)
 	t := ""
 	if strings.HasSuffix(name, ".gz") {

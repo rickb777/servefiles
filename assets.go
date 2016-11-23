@@ -24,16 +24,22 @@ package servefiles
 
 import (
 	"errors"
+	"fmt"
+	"log"
+	"math/rand"
 	"mime"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-	"fmt"
 )
+
+// This needs to track the same string in net/http (which is unlikely ever to change)
+const indexPage = "index.html"
 
 // Assets sets the options for asset handling. Use AssetHandler to create the handler(s) you need.
 type Assets struct {
@@ -43,16 +49,16 @@ type Assets struct {
 	UnwantedPrefixSegments int
 
 	// The directory where the assets reside.
-	AssetPath              string
+	AssetPath string
 
 	// Set the expiry duration for assets. This will be set via headers in the response. This should never be
 	// negative. Use zero to disable asset caching in clients and proxies.
-	MaxAge                 time.Duration
+	MaxAge time.Duration
 
-	expiryElasticity       time.Duration
-	timestamp              int64
-	timestampExpiry        string
-	lock                   sync.Mutex
+	expiryElasticity time.Duration
+	timestamp        int64
+	timestampExpiry  string
+	lock             sync.Mutex
 }
 
 // Type conformance proof
@@ -76,7 +82,7 @@ func AssetHandler(unwantedPrefixSegments int, assetPath string, maxAge time.Dura
 // anyway. So the value is cached and shared between requests for a short while.
 func (a *Assets) expires() string {
 	if a.expiryElasticity == 0 {
-		a.expiryElasticity = 1 + a.MaxAge / 100
+		a.expiryElasticity = 1 + a.MaxAge/100
 	}
 	now := time.Now()
 	unix := now.Unix()
@@ -123,38 +129,55 @@ func checkPlainResource(resource string, header http.Header) string {
 }
 
 func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, int, string) {
-	resource := a.AssetPath + a.removeUnwantedSegments(req.URL.Path)
+	name := a.removeUnwantedSegments(req.URL.Path)
+	if name == "" || strings.HasSuffix(name, "/") {
+		name += indexPage
+	}
+
+	resource := a.AssetPath + name
 	gzipped := resource + ".gz"
 
 	if a.MaxAge > 0 {
 		header.Set("Expires", a.expires())
-		header.Set("Cache-Control", fmt.Sprintf("public, maxAge=%d", a.MaxAge / time.Second))
+		header.Set("Cache-Control", fmt.Sprintf("public, maxAge=%d", a.MaxAge/time.Second))
 	}
 
 	d, err := os.Stat(gzipped)
-	if err == nil {
-		// gzipped file exists and is readable
-		acceptEncoding, ok := req.Header["Accept-Encoding"]
-		if ok {
-			acceptGzip := listContainsWholeString(acceptEncoding[0], "gzip")
-			if acceptGzip {
-				ext := filepath.Ext(resource)
-				header.Set("Content-Type", mime.TypeByExtension(ext))
-				header.Set("Content-Encoding", "gzip")
-				header.Add("Vary", "Accept-Encoding")
-				// weak etag because the representation is not the original file but a compressed variant
-				header.Set("ETag", fmt.Sprintf(`W/"%x-%x"`, d.ModTime().Unix(), d.Size()))
-				return gzipped, 0, ""
-			}
+	if err != nil {
+		if os.IsNotExist(err) {
+			// gzipped does not exist; original might but this gets checked later
+			return checkPlainResource(resource, header), 0, ""
+
+		} else if os.IsPermission(err) {
+			// incorrectly assembled gzipped asset is treated as an error
+			return resource, http.StatusForbidden, "403 Forbidden"
 		}
 
-	} else if os.IsNotExist(err) {
-		// gzipped does not exist; original might but this gets checked later
-		return checkPlainResource(resource, header), 0, ""
+		// Possibly the server is under heavy load and ran out of file descriptors
+		backoff := 2 + rand.Int31()%4 // 2–6 seconds to prevent a stampede
+		header.Set("Retry-After", strconv.Itoa(int(backoff)))
+		log.Printf("Failed to stat %s: %v\n", resource, err)
+		return resource, http.StatusServiceUnavailable, "Currently unavailable"
+	}
 
-	} else if os.IsPermission(err) {
-		// incorrectly assembled gzipped asset is treated as an error
-		return resource, http.StatusForbidden, "403 Forbidden"
+	if d.IsDir() {
+		// this odd case is simply passed on to the standard library
+		return resource, 0, ""
+	}
+
+	// gzipped file exists and is readable
+	acceptEncoding, ok := req.Header["Accept-Encoding"]
+	if ok {
+		acceptGzip := listContainsWholeString(acceptEncoding[0], "gzip")
+		if acceptGzip {
+			ext := filepath.Ext(resource)
+			header.Set("Content-Type", mime.TypeByExtension(ext))
+			header.Set("Content-Encoding", "gzip")
+			header.Add("Vary", "Accept-Encoding")
+			// weak etag because the representation is not the original file but a compressed variant
+			header.Set("ETag", fmt.Sprintf(`W/"%x-%x"`, d.ModTime().Unix(), d.Size()))
+			return gzipped, 0, ""
+		}
 	}
 
 	// no intervention; the file will be served normally by the standard api
