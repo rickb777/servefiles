@@ -25,6 +25,7 @@ package servefiles
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	. "net/url"
 	"os"
 	"reflect"
@@ -55,7 +56,7 @@ func TestMapper(t *testing.T) {
 	}
 
 	for _, test := range cases {
-		a := AssetHandler(test.n, "./assets/", time.Hour)
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(time.Hour)
 		p0 := a.removeUnwantedSegments(test.input)
 		isEqual(t, p0, test.expected, test.input)
 	}
@@ -78,7 +79,7 @@ func TestDirs(t *testing.T) {
 		}
 		url := mustUrl(test.url)
 		request := &http.Request{Method: "GET", URL: url}
-		a := AssetHandler(test.n, "./assets/", time.Second)
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -110,7 +111,7 @@ func TestSimpleNoGzip(t *testing.T) {
 		etag := etagFor(test.path)
 		url := mustUrl(test.url)
 		request := &http.Request{Method: "GET", URL: url}
-		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -138,7 +139,7 @@ func TestSimpleNonExistent(t *testing.T) {
 	for _, test := range cases {
 		url := mustUrl(test.url)
 		request := &http.Request{Method: "GET", URL: url}
-		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -168,7 +169,7 @@ func TestPathWithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		url := mustUrl(test.url)
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
-		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -202,7 +203,7 @@ func TestPathWithGzipAndGzipNoAcceptHeader(t *testing.T) {
 		url := mustUrl(test.url)
 		header := newHeader("Accept-Encoding", "xxx, yyy, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
-		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -238,7 +239,7 @@ func TestPathWithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 		url := mustUrl(test.url)
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
-		a := AssetHandler(test.n, "./assets/", test.maxAge*time.Second)
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		headers := make(http.Header)
 		resource, code, message := a.chooseResource(headers, request)
 		isEqual(t, code, 0, test.path)
@@ -255,11 +256,42 @@ func TestPathWithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 	}
 }
 
+type h404 struct{}
+
+func (h *h404) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(404)
+	w.Write([]byte("<html>foo</html>"))
+}
+
+func Test404Handler(t *testing.T) {
+	cases := []struct {
+		path, conType, response string
+		notFound                http.Handler
+	}{
+		{"/img/nonexisting.png", "text/plain; charset=utf-8", "404 page not found\n", nil},
+		{"/img/nonexisting.png", "text/html", "<html>foo</html>", &h404{}},
+	}
+
+	for _, test := range cases {
+		url := mustUrl("http://localhost:8001" + test.conType)
+		request := &http.Request{Method: "GET", URL: url}
+		a := NewAssetHandler("./assets/").WithNotFound(test.notFound)
+		isEqual(t, a.NotFound, test.notFound, test.conType)
+
+		w := httptest.NewRecorder()
+		a.ServeHTTP(w, request)
+		isEqual(t, w.Code, 404, test.conType)
+		isEqual(t, w.Header()["Content-Type"], []string{test.conType}, test.conType)
+		isEqual(t, w.Body.String(), test.response, test.conType)
+	}
+}
+
 func BenchmarkPathWithGzipAndGzipAcceptHeaderCSS(t *testing.B) {
 	url := mustUrl("http://localhost:8001/a/b/css/style1.css")
 	header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 	request := &http.Request{Method: "GET", URL: url, Header: header}
-	a := AssetHandler(2, "./assets/", time.Hour)
+	a := NewAssetHandler("./assets/").StripOff(2).WithMaxAge(time.Hour)
 	t.ResetTimer()
 	for i := 0; i < t.N; i++ {
 		headers := make(http.Header)
@@ -271,7 +303,7 @@ func BenchmarkPathWithoutGzip(t *testing.B) {
 	url := mustUrl("http://localhost:8001/a/b/css/style1.css")
 	header := newHeader("Accept-Encoding", "xxx, yyy, zzz")
 	request := &http.Request{Method: "GET", URL: url, Header: header}
-	a := AssetHandler(2, "./assets/", time.Hour)
+	a := NewAssetHandler("./assets/").StripOff(2).WithMaxAge(time.Hour)
 	t.ResetTimer()
 	for i := 0; i < t.N; i++ {
 		headers := make(http.Header)

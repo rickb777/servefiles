@@ -55,6 +55,10 @@ type Assets struct {
 	// negative. Use zero to disable asset caching in clients and proxies.
 	MaxAge time.Duration
 
+	// Configurable http.Handler which is called when no matching route is found. If it is not set,
+	// http.NotFound is used.
+	NotFound http.Handler
+
 	expiryElasticity time.Duration
 	timestamp        int64
 	timestampExpiry  string
@@ -66,6 +70,8 @@ var _ http.Handler = &Assets{}
 
 // AssetHandler creates an Assets value. It provides some bounds checking, so use it instead of
 // creating Assets values directly.
+//
+// This function is deprecated; use NewAssetHandler instead.
 func AssetHandler(unwantedPrefixSegments int, assetPath string, maxAge time.Duration) *Assets {
 	if unwantedPrefixSegments < 0 {
 		panic(errors.New("Negative unwantedPrefixSegments"))
@@ -74,7 +80,37 @@ func AssetHandler(unwantedPrefixSegments int, assetPath string, maxAge time.Dura
 		panic(errors.New("Negative maxAge"))
 	}
 	cleanPath := cleanPathAndAppendSlash(assetPath)
-	return &Assets{unwantedPrefixSegments, cleanPath, maxAge, 0, 0, "", sync.Mutex{}}
+	return &Assets{unwantedPrefixSegments, cleanPath, maxAge, nil, 0, 0, "", sync.Mutex{}}
+}
+
+// NewAssetHandler creates an Assets value. It cleans the asset path, so use it instead of
+// creating Assets values directly.
+func NewAssetHandler(assetPath string) *Assets {
+	a := &Assets{}
+	a.AssetPath = cleanPathAndAppendSlash(assetPath)
+	a.lock = sync.Mutex{}
+	return a
+}
+
+func (a Assets) StripOff(unwantedPrefixSegments int) *Assets {
+	if unwantedPrefixSegments < 0 {
+		panic(errors.New("Negative unwantedPrefixSegments"))
+	}
+	a.UnwantedPrefixSegments = unwantedPrefixSegments
+	return &a
+}
+
+func (a Assets) WithMaxAge(maxAge time.Duration) *Assets {
+	if maxAge < 0 {
+		panic(errors.New("Negative maxAge"))
+	}
+	a.MaxAge = maxAge
+	return &a
+}
+
+func (a Assets) WithNotFound(notFound http.Handler) *Assets {
+	a.NotFound = notFound
+	return &a
 }
 
 // Calculate the 'Expires' value using an approximation that reduces unimportant re-calculation.
@@ -192,10 +228,20 @@ func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Conditional requests and content negotiation are handled in ServeFile.
-	// Note that req.URL remains unchanged, even if prefix stripping is turned on, because the resource is
-	// the only value that matters.
-	http.ServeFile(w, req, resource)
+	if a.NotFound == nil {
+		http.ServeFile(w, req, resource)
+	} else {
+		ww := &no404Writer{w, 0}
+
+		// Conditional requests and content negotiation are handled in ServeFile.
+		// Note that req.URL remains unchanged, even if prefix stripping is turned on, because the resource is
+		// the only value that matters.
+		http.ServeFile(ww, req, resource)
+
+		if ww.Code == http.StatusNotFound {
+			a.NotFound.ServeHTTP(w, req)
+		}
+	}
 }
 
 func cleanPathAndAppendSlash(s string) string {
