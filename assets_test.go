@@ -170,32 +170,35 @@ func TestPathWithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
-		headers := make(http.Header)
-		resource, code, message := a.chooseResource(headers, request)
-		isEqual(t, code, 0, test.path)
-		isEqual(t, message, "", test.path)
-		isEqual(t, len(headers), 6, test.path)
+
+		w := httptest.NewRecorder()
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, 200, test.path)
+		headers := w.Header()
+		//t.Logf("%+v\n", headers)
+		isGt(t, len(headers), 6, test.path)
 		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
 		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
+		isEqual(t, headers["X-Content-Type-Options"], []string{"nosniff"}, test.path)
 		isEqual(t, headers["Content-Encoding"], []string{"gzip"}, test.path)
 		isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, test.path)
 		isEqual(t, headers["Etag"], []string{etag}, test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
 		isGt(t, len(headers["Expires"][0]), 25, test.path)
-		isEqual(t, resource, test.path, test.path)
 	}
 }
 
-func TestPathWithGzipAndGzipNoAcceptHeader(t *testing.T) {
+func TestPathWithGzipButNoAcceptHeader(t *testing.T) {
 	cases := []struct {
-		n                       int
-		maxAge                  time.Duration
-		url, path, cacheControl string
+		n                             int
+		maxAge                        time.Duration
+		url, mime, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/css/style1.css", "assets/css/style1.css", "public, maxAge=1"},
-		{2, 2, "http://localhost:8001/a/b/css/style1.css", "assets/css/style1.css", "public, maxAge=2"},
-		{0, 3, "http://localhost:8001/js/script1.js", "assets/js/script1.js", "public, maxAge=3"},
-		{2, 4, "http://localhost:8001/a/b/js/script1.js", "assets/js/script1.js", "public, maxAge=4"},
+		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "assets/css/style1.css", "public, maxAge=1"},
+		{2, 2, "http://localhost:8001/a/b/css/style1.css", "text/css; charset=utf-8", "assets/css/style1.css", "public, maxAge=2"},
+		{0, 3, "http://localhost:8001/js/script1.js", "application/javascript", "assets/js/script1.js", "public, maxAge=3"},
+		{2, 4, "http://localhost:8001/a/b/js/script1.js", "application/javascript", "assets/js/script1.js", "public, maxAge=4"},
 	}
 
 	for _, test := range cases {
@@ -204,34 +207,36 @@ func TestPathWithGzipAndGzipNoAcceptHeader(t *testing.T) {
 		header := newHeader("Accept-Encoding", "xxx, yyy, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
-		headers := make(http.Header)
-		resource, code, message := a.chooseResource(headers, request)
-		isEqual(t, code, 0, test.path)
-		isEqual(t, message, "", test.path)
-		isEqual(t, len(headers), 3, test.path)
+
+		w := httptest.NewRecorder()
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, 200, test.path)
+		headers := w.Header()
+		//t.Logf("%+v\n", headers)
+		isGt(t, len(headers), 5, test.path)
 		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
-		isEqual(t, headers["Content-Type"], emptyStrings, test.path)
+		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
 		isEqual(t, headers["Content-Encoding"], emptyStrings, test.path)
 		isEqual(t, headers["Vary"], emptyStrings, test.path)
 		isEqual(t, headers["Etag"], []string{etag}, test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
 		isGt(t, len(headers["Expires"][0]), 25, test.path)
-		isEqual(t, resource, test.path, test.path)
 	}
 }
 
 func TestPathWithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 	cases := []struct {
-		n                       int
-		maxAge                  time.Duration
-		url, path, cacheControl string
+		n                             int
+		maxAge                        time.Duration
+		url, mime, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/css/style2.css", "assets/css/style2.css", "public, maxAge=1"},
-		{2, 2, "http://localhost:8001/a/b/css/style2.css", "assets/css/style2.css", "public, maxAge=2"},
-		{0, 3, "http://localhost:8001/js/script2.js", "assets/js/script2.js", "public, maxAge=3"},
-		{2, 4, "http://localhost:8001/a/b/js/script2.js", "assets/js/script2.js", "public, maxAge=4"},
-		{0, 5, "http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=5"},
-		{2, 6, "http://localhost:8001/a/b/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=6"},
+		{0, 1, "http://localhost:8001/css/style2.css", "text/css; charset=utf-8", "assets/css/style2.css", "public, maxAge=1"},
+		{2, 2, "http://localhost:8001/a/b/css/style2.css", "text/css; charset=utf-8", "assets/css/style2.css", "public, maxAge=2"},
+		{0, 3, "http://localhost:8001/js/script2.js", "application/javascript", "assets/js/script2.js", "public, maxAge=3"},
+		{2, 4, "http://localhost:8001/a/b/js/script2.js", "application/javascript", "assets/js/script2.js", "public, maxAge=4"},
+		{0, 5, "http://localhost:8001/img/sort_asc.png", "image/png", "assets/img/sort_asc.png", "public, maxAge=5"},
+		{2, 6, "http://localhost:8001/a/b/img/sort_asc.png", "image/png", "assets/img/sort_asc.png", "public, maxAge=6"},
 	}
 
 	for _, test := range cases {
@@ -240,19 +245,21 @@ func TestPathWithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
-		headers := make(http.Header)
-		resource, code, message := a.chooseResource(headers, request)
-		isEqual(t, code, 0, test.path)
-		isEqual(t, message, "", test.path)
-		isEqual(t, len(headers), 3, test.path)
+
+		w := httptest.NewRecorder()
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, 200, test.path)
+		headers := w.Header()
+		//t.Logf("%+v\n", headers)
+		isGt(t, len(headers), 5, test.path)
 		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
-		isEqual(t, headers["Content-Type"], emptyStrings, test.path)
+		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
 		isEqual(t, headers["Content-Encoding"], emptyStrings, test.path)
 		isEqual(t, headers["Vary"], emptyStrings, test.path)
 		isEqual(t, headers["Etag"], []string{etag}, test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
 		isGt(t, len(headers["Expires"][0]), 25, test.path)
-		isEqual(t, resource, test.path, test.path)
 	}
 }
 

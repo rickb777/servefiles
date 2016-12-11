@@ -208,6 +208,8 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 		if acceptGzip {
 			ext := filepath.Ext(resource)
 			header.Set("Content-Type", mime.TypeByExtension(ext))
+			// the standard library sometimes overrides the content type via sniffing
+			header.Set("X-Content-Type-Options", "nosniff")
 			header.Set("Content-Encoding", "gzip")
 			header.Add("Vary", "Accept-Encoding")
 			// weak etag because the representation is not the original file but a compressed variant
@@ -223,22 +225,29 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 // ServeHTTP implements the http.Handler interface.
 func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resource, code, message := a.chooseResource(w.Header(), req)
+	//fmt.Printf(".......... ServeHTTP %s %s -> %d %s\n", req.Method, req.URL.Path, code, resource)
 	if code >= 400 {
 		http.Error(w, message, code)
 		return
 	}
 
 	if a.NotFound == nil {
-		http.ServeFile(w, req, resource)
-	} else {
-		ww := &no404Writer{w, 0}
-
 		// Conditional requests and content negotiation are handled in ServeFile.
 		// Note that req.URL remains unchanged, even if prefix stripping is turned on, because the resource is
 		// the only value that matters.
+		http.ServeFile(w, req, resource)
+
+	} else {
+		ww := newNo404Writer(w)
+
+		//fmt.Printf(".......... ServeFile %s %s %+v\n", req.Method, req.URL.Path, w.Header())
 		http.ServeFile(ww, req, resource)
 
 		if ww.Code == http.StatusNotFound {
+			// ww has silently dropped the headers and body from the built-in handler in this case,
+			// so complete the response using the original handler.
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+			//fmt.Printf(">>>>>>>>> %s %s %+v\n", req.Method, req.URL.Path, w.Header())
 			a.NotFound.ServeHTTP(w, req)
 		}
 	}
