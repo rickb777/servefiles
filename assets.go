@@ -155,11 +155,15 @@ func listContainsWholeString(header, want string) bool {
 	return false
 }
 
+func calculateEtag(d os.FileInfo) string {
+	return fmt.Sprintf(`"%x-%x"`, d.ModTime().Unix(), d.Size())
+}
+
 func checkPlainResource(resource string, header http.Header) string {
 	d, err := os.Stat(resource)
 	if err == nil {
 		// strong etag because the representation is the original file
-		header.Set("ETag", fmt.Sprintf(`"%x-%x"`, d.ModTime().Unix(), d.Size()))
+		header.Set("ETag", calculateEtag(d))
 	}
 	return resource
 }
@@ -213,7 +217,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 			header.Set("Content-Encoding", "gzip")
 			header.Add("Vary", "Accept-Encoding")
 			// weak etag because the representation is not the original file but a compressed variant
-			header.Set("ETag", fmt.Sprintf(`W/"%x-%x"`, d.ModTime().Unix(), d.Size()))
+			header.Set("ETag", "W/"+calculateEtag(d))
 			return gzipped, 0, ""
 		}
 	}
@@ -225,7 +229,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 // ServeHTTP implements the http.Handler interface.
 func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resource, code, message := a.chooseResource(w.Header(), req)
-	//fmt.Printf(".......... ServeHTTP %s %s -> %d %s\n", req.Method, req.URL.Path, code, resource)
+	//fmt.Printf("ServeHTTP %s %s %+v -> %d %s\n", req.Method, req.URL.Path, req.Header, code, resource)
 	if code >= 400 {
 		http.Error(w, message, code)
 		return
@@ -235,21 +239,24 @@ func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		// Conditional requests and content negotiation are handled in ServeFile.
 		// Note that req.URL remains unchanged, even if prefix stripping is turned on, because the resource is
 		// the only value that matters.
+		//fmt.Printf("ServeFile (1) %s %s W:%+v\n", req.Method, req.URL.Path, w.Header())
 		http.ServeFile(w, req, resource)
 
 	} else {
 		ww := newNo404Writer(w)
 
-		//fmt.Printf(".......... ServeFile %s %s %+v\n", req.Method, req.URL.Path, w.Header())
+		//fmt.Printf("ServeFile (2) %s %s W:%+v\n", req.Method, req.URL.Path, w.Header())
 		http.ServeFile(ww, req, resource)
 
 		if ww.Code == http.StatusNotFound {
 			// ww has silently dropped the headers and body from the built-in handler in this case,
 			// so complete the response using the original handler.
 			w.Header().Set("X-Content-Type-Options", "nosniff")
-			//fmt.Printf(">>>>>>>>> %s %s %+v\n", req.Method, req.URL.Path, w.Header())
 			a.NotFound.ServeHTTP(w, req)
+		} else {
+			ww.LazyWriteHeaders()
 		}
+		//fmt.Printf("              WW:%s\n", ww)
 	}
 }
 

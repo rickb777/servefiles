@@ -2,6 +2,7 @@ package servefiles
 
 import (
 	"net/http"
+	"fmt"
 )
 
 type no404Writer struct {
@@ -34,16 +35,21 @@ func (ww *no404Writer) Write(bytes []byte) (int, error) {
 		// The status will be StatusOK if WriteHeader has not been called yet
 		ww.Code = http.StatusOK
 	} else if ww.Code == http.StatusNotFound {
+		// consume the content from the Go built-in 404 handler
 		return len(bytes), nil
 	}
 
+	ww.LazyWriteHeaders()
+	return ww.w.Write(bytes)
+}
+
+func (ww *no404Writer) LazyWriteHeaders() {
 	// lazily pass on headers - allows them to be dropped when 404 happens
 	if !ww.codeSent {
 		ww.codeSent = true
 		copyHeaders(ww.headerCache, ww.w.Header())
 		ww.w.WriteHeader(ww.Code)
 	}
-	return ww.w.Write(bytes)
 }
 
 func (ww *no404Writer) CloseNotify() <-chan bool {
@@ -59,6 +65,13 @@ func (ww *no404Writer) Flush() {
 	if ok {
 		f.Flush()
 	}
+}
+
+func (ww *no404Writer) String() string {
+	if ww.codeSent {
+		return fmt.Sprintf("%d %+v\n", ww.Code, ww.headerCache)
+	}
+	return fmt.Sprintf("--- %+v\n", ww.headerCache)
 }
 
 func copyHeaders(from, to http.Header) {

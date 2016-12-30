@@ -43,7 +43,7 @@ func init() {
 	}
 }
 
-func TestMapper(t *testing.T) {
+func TestRemoveUnwantedSegments(t *testing.T) {
 	cases := []struct {
 		n               int
 		input, expected string
@@ -57,12 +57,14 @@ func TestMapper(t *testing.T) {
 
 	for _, test := range cases {
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(time.Hour)
+
 		p0 := a.removeUnwantedSegments(test.input)
+
 		isEqual(t, p0, test.expected, test.input)
 	}
 }
 
-func TestDirs(t *testing.T) {
+func TestChooseResourceDirs(t *testing.T) {
 	cases := []struct {
 		n                       int
 		expectEtag              bool
@@ -70,6 +72,7 @@ func TestDirs(t *testing.T) {
 	}{
 		{0, true, "http://localhost:8001/", "assets/", "public, maxAge=1"},
 		{0, false, "http://localhost:8001/img/", "assets/img/", "public, maxAge=1"},
+		{3, false, "http://localhost:8001/x/y/z/img/", "assets/img/", "public, maxAge=1"},
 	}
 
 	for _, test := range cases {
@@ -81,13 +84,15 @@ func TestDirs(t *testing.T) {
 		request := &http.Request{Method: "GET", URL: url}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(time.Second)
 		headers := make(http.Header)
+
 		resource, code, message := a.chooseResource(headers, request)
+
 		isEqual(t, code, 0, test.path)
 		isEqual(t, message, "", test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isGte(t, len(headers["Expires"][0]), 25, test.path)
 		//fmt.Println(headers["Expires"])
-		isEqual(t, resource, test.path+"index.html", test.path)
+		isEqual(t, resource, test.path + "index.html", test.path)
 		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
 		if test.expectEtag {
 			isEqual(t, headers["Etag"], []string{etag}, test.path)
@@ -97,7 +102,7 @@ func TestDirs(t *testing.T) {
 	}
 }
 
-func TestSimpleNoGzip(t *testing.T) {
+func TestChooseResourceSimpleNoGzip(t *testing.T) {
 	cases := []struct {
 		n                       int
 		maxAge                  time.Duration
@@ -105,6 +110,7 @@ func TestSimpleNoGzip(t *testing.T) {
 	}{
 		{0, 1, "http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=1"},
 		{0, 3671, "http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=3671"},
+		{3, 3671, "http://localhost:8001/x/y/z/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=3671"},
 	}
 
 	for _, test := range cases {
@@ -113,11 +119,13 @@ func TestSimpleNoGzip(t *testing.T) {
 		request := &http.Request{Method: "GET", URL: url}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		headers := make(http.Header)
+
 		resource, code, message := a.chooseResource(headers, request)
+
 		isEqual(t, code, 0, test.path)
 		isEqual(t, message, "", test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isGte(t, len(headers["Expires"][0]), 25, test.path)
 		//fmt.Println(headers["Expires"])
 		isEqual(t, resource, test.path, test.path)
 		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
@@ -125,7 +133,7 @@ func TestSimpleNoGzip(t *testing.T) {
 	}
 }
 
-func TestSimpleNonExistent(t *testing.T) {
+func TestChooseResourceSimpleNonExistent(t *testing.T) {
 	cases := []struct {
 		n                       int
 		maxAge                  time.Duration
@@ -141,18 +149,20 @@ func TestSimpleNonExistent(t *testing.T) {
 		request := &http.Request{Method: "GET", URL: url}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		headers := make(http.Header)
+
 		resource, code, message := a.chooseResource(headers, request)
+
 		isEqual(t, code, 0, test.path)
 		isEqual(t, message, "", test.path)
 		isEqual(t, len(headers), 2, test.path)
 		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isGte(t, len(headers["Expires"][0]), 25, test.path)
 		isEqual(t, resource, test.path, test.path)
 	}
 }
 
-func TestPathWithGzipAndGzipWithAcceptHeader(t *testing.T) {
+func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 	cases := []struct {
 		n                             int
 		maxAge                        time.Duration
@@ -170,14 +180,14 @@ func TestPathWithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
-
 		w := httptest.NewRecorder()
+
 		a.ServeHTTP(w, request)
 
 		isEqual(t, w.Code, 200, test.path)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		isGt(t, len(headers), 6, test.path)
+		isGte(t, len(headers), 7, test.path)
 		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
 		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
 		isEqual(t, headers["X-Content-Type-Options"], []string{"nosniff"}, test.path)
@@ -185,11 +195,11 @@ func TestPathWithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, test.path)
 		isEqual(t, headers["Etag"], []string{etag}, test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isGte(t, len(headers["Expires"][0]), 25, test.path)
 	}
 }
 
-func TestPathWithGzipButNoAcceptHeader(t *testing.T) {
+func TestServeHTTP200WithGzipButNoAcceptHeader(t *testing.T) {
 	cases := []struct {
 		n                             int
 		maxAge                        time.Duration
@@ -207,25 +217,25 @@ func TestPathWithGzipButNoAcceptHeader(t *testing.T) {
 		header := newHeader("Accept-Encoding", "xxx, yyy, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
-
 		w := httptest.NewRecorder()
+
 		a.ServeHTTP(w, request)
 
 		isEqual(t, w.Code, 200, test.path)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		isGt(t, len(headers), 5, test.path)
+		isGte(t, len(headers), 6, test.path)
 		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
 		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
 		isEqual(t, headers["Content-Encoding"], emptyStrings, test.path)
 		isEqual(t, headers["Vary"], emptyStrings, test.path)
 		isEqual(t, headers["Etag"], []string{etag}, test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isGte(t, len(headers["Expires"][0]), 25, test.path)
 	}
 }
 
-func TestPathWithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
+func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 	cases := []struct {
 		n                             int
 		maxAge                        time.Duration
@@ -245,21 +255,21 @@ func TestPathWithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 		header := newHeader("Accept-Encoding", "xxx, gzip, zzz")
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
-
 		w := httptest.NewRecorder()
+
 		a.ServeHTTP(w, request)
 
 		isEqual(t, w.Code, 200, test.path)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		isGt(t, len(headers), 5, test.path)
+		isGte(t, len(headers), 6, test.path)
 		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
 		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
 		isEqual(t, headers["Content-Encoding"], emptyStrings, test.path)
 		isEqual(t, headers["Vary"], emptyStrings, test.path)
 		isEqual(t, headers["Etag"], []string{etag}, test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGt(t, len(headers["Expires"][0]), 25, test.path)
+		isGte(t, len(headers["Expires"][0]), 25, test.path)
 	}
 }
 
@@ -285,12 +295,54 @@ func Test404Handler(t *testing.T) {
 		request := &http.Request{Method: "GET", URL: url}
 		a := NewAssetHandler("./assets/").WithNotFound(test.notFound)
 		isEqual(t, a.NotFound, test.notFound, test.conType)
-
 		w := httptest.NewRecorder()
+
 		a.ServeHTTP(w, request)
+
 		isEqual(t, w.Code, 404, test.conType)
 		isEqual(t, w.Header()["Content-Type"], []string{test.conType}, test.conType)
 		isEqual(t, w.Body.String(), test.response, test.conType)
+	}
+}
+
+func TestServeHTTP304(t *testing.T) {
+	cases := []struct {
+		url, mime, path string
+		notFound        http.Handler
+	}{
+		{"http://localhost:8001/css/style2.css", "text/css; charset=utf-8", "assets/css/style2.css", nil},
+		{"http://localhost:8001/js/script2.js", "application/javascript", "assets/js/script2.js", nil},
+		{"http://localhost:8001/img/sort_asc.png", "image/png", "assets/img/sort_asc.png", nil},
+		{"http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "assets/css/style1.css", nil},
+		{"http://localhost:8001/js/script1.js", "application/javascript", "assets/js/script1.js", nil},
+
+		{"http://localhost:8001/css/style2.css", "text/css; charset=utf-8", "assets/css/style2.css", &h404{}},
+		{"http://localhost:8001/js/script2.js", "application/javascript", "assets/js/script2.js", &h404{}},
+		{"http://localhost:8001/img/sort_asc.png", "image/png", "assets/img/sort_asc.png", &h404{}},
+		{"http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "assets/css/style1.css", &h404{}},
+		{"http://localhost:8001/js/script1.js", "application/javascript", "assets/js/script1.js", &h404{}},
+	}
+
+	for _, test := range cases {
+		etag := etagFor(test.path)
+		url := mustUrl(test.url)
+		header := newHeader("If-None-Match", etag)
+		request := &http.Request{Method: "GET", URL: url, Header: header}
+		a := NewAssetHandler("./assets/").WithNotFound(test.notFound)
+		w := httptest.NewRecorder()
+
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, 304, test.path)
+		headers := w.Header()
+		//t.Logf("%+v\n", headers)
+		isGte(t, len(headers), 1, test.path)
+		isEqual(t, headers["Cache-Control"], emptyStrings, test.path)
+		isEqual(t, headers["Content-Type"], emptyStrings, test.path)
+		isEqual(t, headers["Content-Length"], emptyStrings, test.path)
+		isEqual(t, headers["Content-Encoding"], emptyStrings, test.path)
+		isEqual(t, headers["Vary"], emptyStrings, test.path)
+		isEqual(t, headers["Etag"], []string{etag}, test.path)
 	}
 }
 
@@ -324,9 +376,9 @@ func isEqual(t *testing.T, a, b, hint interface{}) {
 	}
 }
 
-func isGt(t *testing.T, a, b int, hint interface{}) {
-	if a <= b {
-		t.Errorf("Got %d; expected greater than %d - for %v\n", a, b, hint)
+func isGte(t *testing.T, a, b int, hint interface{}) {
+	if a < b {
+		t.Errorf("Got %d; expected at least %d - for %v\n", a, b, hint)
 	}
 }
 
