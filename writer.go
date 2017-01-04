@@ -1,8 +1,8 @@
 package servefiles
 
 import (
-	"net/http"
 	"fmt"
+	"net/http"
 )
 
 type no404Writer struct {

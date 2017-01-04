@@ -68,6 +68,8 @@ type Assets struct {
 // Type conformance proof
 var _ http.Handler = &Assets{}
 
+//-------------------------------------------------------------------------------------------------
+
 // AssetHandler creates an Assets value. It provides some bounds checking, so use it instead of
 // creating Assets values directly.
 //
@@ -112,6 +114,8 @@ func (a Assets) WithNotFound(notFound http.Handler) *Assets {
 	a.NotFound = notFound
 	return &a
 }
+
+//-------------------------------------------------------------------------------------------------
 
 // Calculate the 'Expires' value using an approximation that reduces unimportant re-calculation.
 // We don't need to do this accurately because the 'Cache-Control' maxAge value takes precedence
