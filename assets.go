@@ -124,7 +124,7 @@ func (a *Assets) expires() string {
 	if a.expiryElasticity == 0 {
 		a.expiryElasticity = 1 + a.MaxAge/100
 	}
-	now := time.Now()
+	now := time.Now().UTC()
 	unix := now.Unix()
 	if unix > a.timestamp {
 		later := now.Add(a.MaxAge + a.expiryElasticity) // add expiryElasticity to avoid negative expiry
