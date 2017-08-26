@@ -70,21 +70,6 @@ var _ http.Handler = &Assets{}
 
 //-------------------------------------------------------------------------------------------------
 
-// AssetHandler creates an Assets value. It provides some bounds checking, so use it instead of
-// creating Assets values directly.
-//
-// This function is deprecated; use NewAssetHandler instead.
-func AssetHandler(unwantedPrefixSegments int, assetPath string, maxAge time.Duration) *Assets {
-	if unwantedPrefixSegments < 0 {
-		panic(errors.New("Negative unwantedPrefixSegments"))
-	}
-	if maxAge < 0 {
-		panic(errors.New("Negative maxAge"))
-	}
-	cleanPath := cleanPathAndAppendSlash(assetPath)
-	return &Assets{unwantedPrefixSegments, cleanPath, maxAge, nil, 0, 0, "", sync.Mutex{}}
-}
-
 // NewAssetHandler creates an Assets value. It cleans the asset path, so use it instead of
 // creating Assets values directly.
 func NewAssetHandler(assetPath string) *Assets {
