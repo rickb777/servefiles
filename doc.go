@@ -25,7 +25,7 @@ Package servefiles provides a static asset handler for serving files such as ima
 javascript code. This is an enhancement to the standard net/http ServeFiles, which is used internally.
 Care is taken to set headers such that the assets will be efficiently cached by browsers and proxies.
 
-    assets := servefiles.AssetHandler(0, "./assets/", time.Hour)
+    assets := servefiles.NewAssetHandler("./assets/").WithMaxAge(time.Hour)
 
 Assets is an http.Handler and can be used alongside your other handlers.
 
