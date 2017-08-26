@@ -70,8 +70,11 @@ var _ http.Handler = &Assets{}
 
 //-------------------------------------------------------------------------------------------------
 
-// NewAssetHandler creates an Assets value. It cleans the asset path, so use it instead of
-// creating Assets values directly.
+// NewAssetHandler creates an Assets value. The parameter is the directory containing the asset files;
+// this can be absolute or relative to the directory in which the server process is started.
+//
+// This function cleans (i.e. normalises) the asset path, so use it instead of creating Assets values
+// directly.
 func NewAssetHandler(assetPath string) *Assets {
 	a := &Assets{}
 	a.AssetPath = cleanPathAndAppendSlash(assetPath)
