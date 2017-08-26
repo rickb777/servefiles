@@ -62,7 +62,7 @@ type Assets struct {
 	expiryElasticity time.Duration
 	timestamp        int64
 	timestampExpiry  string
-	lock             sync.Mutex
+	lock             *sync.Mutex
 }
 
 // Type conformance proof
@@ -75,7 +75,7 @@ var _ http.Handler = &Assets{}
 func NewAssetHandler(assetPath string) *Assets {
 	a := &Assets{}
 	a.AssetPath = cleanPathAndAppendSlash(assetPath)
-	a.lock = sync.Mutex{}
+	a.lock = &sync.Mutex{}
 	return a
 }
 
