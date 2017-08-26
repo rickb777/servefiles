@@ -21,7 +21,7 @@
 // SOFTWARE.
 
 /*
-  Package `servefiles` provides a static asset handler for serving files such as images, stylesheets and
+  Package servefiles provides a static asset handler for serving files such as images, stylesheets and
   javascript code. This is an enhancement to the standard net/http ServeFiles, which is used internally.
   Care is taken to set headers such that the assets will be efficiently cached by browsers and proxies.
 
@@ -36,8 +36,8 @@
   gzip anything on-the-fly. Nor does it create any gzipped files for you.
 
   During the preparation of your web assets, all text files (CSS, JS etc) should be accompanied by their gzipped
-  equivalent. The Assets handler will first look for the gzipped file, which it will serve if present. Otherwise
-  it will serve the 'normal' file.
+  equivalent; your build process will need to do this. The Assets handler will first look for the gzipped file,
+  which it will serve if present. Otherwise it will serve the 'normal' file.
 
   This has many benefits: fewer bytes are read from the disk, a smaller memory footprint is needed in the server,
   less data copying happens, fewer bytes are sent across the network, etc.
@@ -62,8 +62,8 @@
 
   Cache Control
 
-  To go even further, the 'far-future' technique can and should be used. Set a long expiry time, e.g.
-  time.Hour * 24 * 365 * 10.
+  To go even further, the 'far-future' technique can and should often be used. Set a long expiry time, e.g.
+  ten years via `time.Hour * 24 * 365 * 10`.
 
   Browsers will cache such assets and not make requests for them for the next ten years (or whatever). Not even
   conditional requests are made. There is clearly a big benefit in page load times after the first visit.
@@ -89,21 +89,22 @@
   for example each time your server starts). Each time that number changes, browsers will see the asset files as
   being new, and they will later drop old versions from their cache regardless of their ten-year lifespan.
 
-  So you get the far-future lifespan combined with being able to push out changed assets when you need to.
+  So you get the far-future lifespan combined with being able to push out changed assets as often as you need to.
 
 
   Example Usage
 
   To serve files with a ten-year expiry, this creates a suitably-configured handler:
 
-      assets := servefiles.AssetHandler( 1, "./assets/", 10 * 365 * 24 * time.Hour )
+      assets := servefiles.NewAssetHandler("./assets/").StripOff(1).WithMaxAge(10 * 365 * 24 * time.Hour)
 
-  Notice here the first parameter is 1 instead of the default, 0. So the first segment of the URL path gets
-  discarded. A larger number is permitted.
+  The first parameter names the local directory that holds the asset files. It can be absolute or relative to
+  the directory in which the server process is started.
 
-  The second parameter names the local directory that holds the asset files. It can be relative or absolute.
+  Notice here the StripOff parameter is 1, so the first segment of the URL path gets discarded. A larger number
+  is permitted.
 
-  The third parameter is the maximum age to be specified in the cache-control headers. It can be any duration
+  The WithMaxAge parameter is the maximum age to be specified in the cache-control headers. It can be any duration
   from zero upwards.
 */
 package servefiles

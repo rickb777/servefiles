@@ -79,6 +79,11 @@ func NewAssetHandler(assetPath string) *Assets {
 	return a
 }
 
+// StripOff alters the handler to strip off a specified number of segments from the path before
+// looking for the matching asset. For example, if StripOff(2) has been applied, the requested
+// path "/a/b/c/d/doc.js" would be shortened to "c/d/doc.js".
+//
+// The returned handler is a new copy of the original one.
 func (a Assets) StripOff(unwantedPrefixSegments int) *Assets {
 	if unwantedPrefixSegments < 0 {
 		panic(errors.New("Negative unwantedPrefixSegments"))
@@ -87,6 +92,9 @@ func (a Assets) StripOff(unwantedPrefixSegments int) *Assets {
 	return &a
 }
 
+// WithMaxAge alters the handler to set the specified max age on the served assets.
+//
+// The returned handler is a new copy of the original one.
 func (a Assets) WithMaxAge(maxAge time.Duration) *Assets {
 	if maxAge < 0 {
 		panic(errors.New("Negative maxAge"))
@@ -95,6 +103,10 @@ func (a Assets) WithMaxAge(maxAge time.Duration) *Assets {
 	return &a
 }
 
+// WithNotFound alters the handler so that 404-not found cases are passed to a specified
+// handler. Without this, the default handler is the one provided in the net/http package.
+//
+// The returned handler is a new copy of the original one.
 func (a Assets) WithNotFound(notFound http.Handler) *Assets {
 	a.NotFound = notFound
 	return &a
