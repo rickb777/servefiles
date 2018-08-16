@@ -36,6 +36,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/spf13/afero"
 )
 
 // This needs to track the same string in net/http (which is unlikely ever to change)
@@ -48,9 +49,6 @@ type Assets struct {
 	// control. Use zero for default behaviour.
 	UnwantedPrefixSegments int
 
-	// The directory where the assets reside.
-	AssetPath string
-
 	// Set the expiry duration for assets. This will be set via headers in the response. This should never be
 	// negative. Use zero to disable asset caching in clients and proxies.
 	MaxAge time.Duration
@@ -59,6 +57,8 @@ type Assets struct {
 	// http.NotFound is used.
 	NotFound http.Handler
 
+	fs               afero.Fs
+	server           http.Handler
 	expiryElasticity time.Duration
 	timestamp        int64
 	timestampExpiry  string
@@ -73,13 +73,20 @@ var _ http.Handler = &Assets{}
 // NewAssetHandler creates an Assets value. The parameter is the directory containing the asset files;
 // this can be absolute or relative to the directory in which the server process is started.
 //
-// This function cleans (i.e. normalises) the asset path, so use it instead of creating Assets values
-// directly.
+// This function cleans (i.e. normalises) the asset path.
 func NewAssetHandler(assetPath string) *Assets {
-	a := &Assets{}
-	a.AssetPath = cleanPathAndAppendSlash(assetPath)
-	a.lock = &sync.Mutex{}
-	return a
+	cleanAssetPath := cleanPathAndAppendSlash(assetPath)
+	fs := afero.NewBasePathFs(afero.NewOsFs(), cleanAssetPath)
+	return NewAssetHandlerFS(fs)
+}
+
+// NewAssetHandlerFS creates an Assets value for a given filesystem.
+func NewAssetHandlerFS(fs afero.Fs) *Assets {
+	return &Assets{
+		fs:     fs,
+		server: http.FileServer(afero.NewHttpFs(fs)),
+		lock:   &sync.Mutex{},
+	}
 }
 
 // StripOff alters the handler to strip off a specified number of segments from the path before
@@ -139,81 +146,86 @@ func (a *Assets) expires() string {
 }
 
 func (a *Assets) removeUnwantedSegments(path string) string {
-	//log.Printf("removeUnwantedSegments %s", path)
-	for i := a.UnwantedPrefixSegments; i >= 0; i-- {
-		slash := strings.IndexByte(path, '/') + 1
+	for i := a.UnwantedPrefixSegments; i > 0; i-- {
+		slash := strings.IndexByte(path[1:], '/') + 1
 		if slash > 0 {
+			debugf("removeUnwantedSegments %d %d %s\n", i, slash, path)
 			path = path[slash:]
 		}
 	}
+	debugf("removeUnwantedSegments = %s\n", path)
 	return path
 }
 
-func listContainsWholeString(header, want string) bool {
-	accepted := strings.Split(header, ",")
-	for _, encoding := range accepted {
-		if strings.TrimSpace(encoding) == want {
-			return true
+//-------------------------------------------------------------------------------------------------
+
+type fileData struct {
+	resource string
+	code     code
+	fi       os.FileInfo
+}
+
+func calculateEtag(fi os.FileInfo) string {
+	if fi == nil {
+		return ""
+	}
+	return fmt.Sprintf(`"%x-%x"`, fi.ModTime().Unix(), fi.Size())
+}
+
+func handleSaturatedServer(header http.Header, resource string, err error) fileData {
+	// Possibly the server is under heavy load and ran out of file descriptors
+	backoff := 2 + rand.Int31()%4 // 2–6 seconds to prevent a stampede
+	header.Set("Retry-After", strconv.Itoa(int(backoff)))
+	log.Printf("Failed to stat %s: %v\n", resource, err)
+	debugf("handleSaturatedServer 503 %s\n", resource)
+	return fileData{resource, ServiceUnavailable, nil}
+}
+
+func (a *Assets) checkResource(resource string, header http.Header) fileData {
+	d, err := a.fs.Stat(resource)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// gzipped does not exist; original might but this gets checked later
+			debugf("checkResource 404 %s\n", resource)
+			return fileData{"", NotFound, nil}
+
+		} else if os.IsPermission(err) {
+			// incorrectly assembled gzipped asset is treated as an error
+			debugf("checkResource 403 %s\n", resource)
+			return fileData{resource, Forbidden, nil}
 		}
-	}
-	return false
-}
 
-func calculateEtag(d os.FileInfo) string {
-	return fmt.Sprintf(`"%x-%x"`, d.ModTime().Unix(), d.Size())
-}
-
-func checkPlainResource(resource string, header http.Header) string {
-	d, err := os.Stat(resource)
-	if err == nil {
-		// strong etag because the representation is the original file
-		header.Set("ETag", calculateEtag(d))
-	}
-	return resource
-}
-
-func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, int, string) {
-	name := a.removeUnwantedSegments(req.URL.Path)
-	if name == "" || strings.HasSuffix(name, "/") {
-		name += indexPage
+		return handleSaturatedServer(header, resource, err)
 	}
 
-	resource := a.AssetPath + name
-	gzipped := resource + ".gz"
+	if d.IsDir() {
+		// directory edge case is simply passed on to the standard library
+		return fileData{resource, Directory, nil}
+	}
+
+	debugf("checkResource 100 %s\n", resource)
+	return fileData{resource, Continue, d}
+}
+
+func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, code) {
+	resource := a.removeUnwantedSegments(req.URL.Path)
+	if strings.HasSuffix(resource, "/") {
+		resource += indexPage
+	}
+	debugf("chooseResource %s %s %s\n", req.Method, req.URL.Path, resource)
 
 	if a.MaxAge > 0 {
 		header.Set("Expires", a.expires())
 		header.Set("Cache-Control", fmt.Sprintf("public, maxAge=%d", a.MaxAge/time.Second))
 	}
 
-	d, err := os.Stat(gzipped)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// gzipped does not exist; original might but this gets checked later
-			return checkPlainResource(resource, header), 0, ""
+	acceptEncoding := commaSeparatedList(req.Header.Get("Accept-Encoding"))
+	if acceptEncoding.Contains("gzip") {
+		gzipped := resource + ".gz"
 
-		} else if os.IsPermission(err) {
-			// incorrectly assembled gzipped asset is treated as an error
-			return resource, http.StatusForbidden, "403 Forbidden"
-		}
+		fdgz := a.checkResource(gzipped, header)
 
-		// Possibly the server is under heavy load and ran out of file descriptors
-		backoff := 2 + rand.Int31()%4 // 2–6 seconds to prevent a stampede
-		header.Set("Retry-After", strconv.Itoa(int(backoff)))
-		log.Printf("Failed to stat %s: %v\n", resource, err)
-		return resource, http.StatusServiceUnavailable, "Currently unavailable"
-	}
-
-	if d.IsDir() {
-		// this odd case is simply passed on to the standard library
-		return resource, 0, ""
-	}
-
-	// gzipped file exists and is readable
-	acceptEncoding, ok := req.Header["Accept-Encoding"]
-	if ok {
-		acceptGzip := listContainsWholeString(acceptEncoding[0], "gzip")
-		if acceptGzip {
+		if fdgz.code == Continue {
 			ext := filepath.Ext(resource)
 			header.Set("Content-Type", mime.TypeByExtension(ext))
 			// the standard library sometimes overrides the content type via sniffing
@@ -221,50 +233,56 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 			header.Set("Content-Encoding", "gzip")
 			header.Add("Vary", "Accept-Encoding")
 			// weak etag because the representation is not the original file but a compressed variant
-			header.Set("ETag", "W/"+calculateEtag(d))
-			return gzipped, 0, ""
+			header.Set("ETag", "W/"+calculateEtag(fdgz.fi))
+			return gzipped, Continue
 		}
 	}
 
 	// no intervention; the file will be served normally by the standard api
-	return checkPlainResource(resource, header), 0, ""
+	fd := a.checkResource(resource, header)
+
+	if fd.code > 0 {
+		// strong etag because the representation is the original file
+		header.Set("ETag", calculateEtag(fd.fi))
+	}
+
+	return fd.resource, fd.code
 }
 
 // ServeHTTP implements the http.Handler interface.
 func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	resource, code, message := a.chooseResource(w.Header(), req)
-	//fmt.Printf("ServeHTTP %s %s %+v -> %d %s\n", req.Method, req.URL.Path, req.Header, code, resource)
-	if code >= 400 {
-		http.Error(w, message, code)
+	resource, code := a.chooseResource(w.Header(), req)
+	debugf("ServeHTTP %s %s %+v -> %d %s\n", req.Method, req.URL.Path, req.Header, code, resource)
+
+	if code == NotFound && a.NotFound != nil {
+		debugf("ServeFile (2) %s %s W:%+v\n", req.Method, req.URL.Path, w.Header())
+
+		// ww has silently dropped the headers and body from the built-in handler in this case,
+		// so complete the response using the original handler.
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		a.NotFound.ServeHTTP(w, req)
 		return
 	}
 
-	if a.NotFound == nil {
-		// Conditional requests and content negotiation are handled in ServeFile.
-		// Note that req.URL remains unchanged, even if prefix stripping is turned on, because the resource is
-		// the only value that matters.
-		//fmt.Printf("ServeFile (1) %s %s W:%+v\n", req.Method, req.URL.Path, w.Header())
-		http.ServeFile(w, req, resource)
-
-	} else {
-		ww := newNo404Writer(w)
-
-		//fmt.Printf("ServeFile (2) %s %s W:%+v\n", req.Method, req.URL.Path, w.Header())
-		http.ServeFile(ww, req, resource)
-
-		if ww.Code == http.StatusNotFound {
-			// ww has silently dropped the headers and body from the built-in handler in this case,
-			// so complete the response using the original handler.
-			w.Header().Set("X-Content-Type-Options", "nosniff")
-			a.NotFound.ServeHTTP(w, req)
-		} else {
-			ww.LazyWriteHeaders()
-		}
-		//fmt.Printf("              WW:%s\n", ww)
+	if code >= 400 {
+		http.Error(w, code.String(), int(code))
+		return
 	}
+
+	req.URL.Path = resource
+
+	// Conditional requests and content negotiation are handled in ServeFile.
+	// Note that req.URL remains unchanged, even if prefix stripping is turned on, because the resource is
+	// the only value that matters.
+	debugf("ServeFile (1) %s %s W:%+v\n", req.Method, req.URL.Path, w.Header())
+	a.server.ServeHTTP(w, req)
 }
 
 func cleanPathAndAppendSlash(s string) string {
 	clean := path.Clean(s)
 	return string(append([]byte(clean), '/'))
+}
+
+func debugf(msg string, args ...interface{}) {
+	//fmt.Printf(msg, args...)
 }

@@ -1,0 +1,49 @@
+#!/bin/bash -e
+# Cannot use test profile flag with multiple packages, so this script
+# processes each directory in turn.
+#
+# Other useful value is 'html'
+#MODE=${1:-func}
+
+DIR=$PWD
+DOT=$(dirname $0)
+cd $DOT
+TOP=$PWD
+
+#go env
+
+# install Goveralls if absent
+if ! type -p goveralls; then
+  echo go get github.com/mattn/goveralls
+  go get github.com/mattn/goveralls
+fi
+
+rm -rf reports
+mkdir reports
+
+for file in $(find . -type f -name \*_test.go); do
+  dirname $file >> coverage$$.tmp
+done
+
+sort coverage$$.tmp | uniq | tee coverage$$.dirs
+
+for pkg in $(cat coverage$$.dirs); do
+  name=$(echo $pkg | sed 's#^./##' | sed 's#/#-#g')
+  [ "$pkg" = "." ] && name=$(basename $PWD)
+  echo $pkg becomes $name
+  go test -v -coverprofile coverage$$.data $pkg
+  if [ -f coverage$$.data ]; then
+    go tool cover -html coverage$$.data -o reports/$name.html
+    unlink coverage$$.data
+  fi
+done
+
+rm -f coverage$$.tmp coverage$$.dirs
+
+if [ -n "$(type -p chromium-browser)" ]; then
+  chromium-browser reports/*.html >/dev/null &
+elif [ -n "$(type -p open)" ]; then
+  open reports/*.html # >/dev/null &
+else
+  ls -lh reports/
+fi
