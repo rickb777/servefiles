@@ -25,7 +25,6 @@ package servefiles
 import (
 	"errors"
 	"fmt"
-	"log"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -129,10 +128,13 @@ func (a Assets) WithNotFound(notFound http.Handler) *Assets {
 // anyway. So the value is cached and shared between requests for a short while.
 func (a *Assets) expires() string {
 	if a.expiryElasticity == 0 {
+		// lazy initialisation
 		a.expiryElasticity = 1 + a.MaxAge/100
 	}
+
 	now := time.Now().UTC()
 	unix := now.Unix()
+
 	if unix > a.timestamp {
 		later := now.Add(a.MaxAge + a.expiryElasticity) // add expiryElasticity to avoid negative expiry
 		a.lock.Lock()
@@ -142,6 +144,7 @@ func (a *Assets) expires() string {
 		a.timestampExpiry = later.Format(time.RFC1123)
 		a.timestamp = unix + int64(a.expiryElasticity)
 	}
+
 	return a.timestampExpiry
 }
 
@@ -178,7 +181,7 @@ func handleSaturatedServer(header http.Header, resource string, err error) fileD
 	// Possibly the server is under heavy load and ran out of file descriptors
 	backoff := 2 + rand.Int31()%4 // 2–6 seconds to prevent a stampede
 	header.Set("Retry-After", strconv.Itoa(int(backoff)))
-	log.Printf("Failed to stat %s: %v\n", resource, err)
+	//log.Printf("Failed to stat %s: %v\n", resource, err)
 	debugf("handleSaturatedServer 503 %s\n", resource)
 	return fileData{resource, ServiceUnavailable, nil}
 }

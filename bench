@@ -1,10 +1,10 @@
 #!/bin/bash -e
 cd $(dirname $0)
 
-mkdir -p benchmarks
+mkdir -p trend
 
 vsn=$(git describe --tags --dirty)
-file=benchmarks/$vsn-$(date '+%Y%m%d').txt
+file=trend/$vsn-$(date '+%Y%m%d').txt
 echo Writing results to $file
 
 go test -bench . | tee $file
