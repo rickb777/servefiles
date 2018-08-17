@@ -1,0 +1,10 @@
+#!/bin/bash -e
+cd $(dirname $0)
+
+mkdir -p benchmarks
+
+vsn=$(git describe --tags --dirty)
+file=benchmarks/$vsn-$(date '+%Y%m%d').txt
+echo Writing results to $file
+
+go test -bench . | tee $file

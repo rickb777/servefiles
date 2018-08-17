@@ -148,10 +148,12 @@ func (a *Assets) expires() string {
 func (a *Assets) removeUnwantedSegments(path string) string {
 	for i := a.UnwantedPrefixSegments; i > 0; i-- {
 		slash := strings.IndexByte(path[1:], '/') + 1
-		if slash > 0 {
-			debugf("removeUnwantedSegments %d %d %s\n", i, slash, path)
-			path = path[slash:]
+		if slash <= 0 {
+			debugf("removeUnwantedSegments => /\n")
+			return "/"
 		}
+		debugf("removeUnwantedSegments %d %d %s\n", i, slash, path)
+		path = path[slash:]
 	}
 	debugf("removeUnwantedSegments = %s\n", path)
 	return path

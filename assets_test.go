@@ -32,6 +32,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"github.com/spf13/afero"
 )
 
 var emptyStrings []string
@@ -47,7 +48,7 @@ func init() {
 	mustChdir("test")
 }
 
-func xTestRemoveUnwantedSegments(t *testing.T) {
+func TestRemoveUnwantedSegments(t *testing.T) {
 	cases := []struct {
 		n               int
 		input, expected string
@@ -69,44 +70,6 @@ func xTestRemoveUnwantedSegments(t *testing.T) {
 		isEqual(t, p0, test.expected, test.input)
 	}
 }
-
-//func TestChooseResourceDirs(t *testing.T) {
-//	cases := []struct {
-//		n                       int
-//		expectEtag              bool
-//		url, path, cacheControl string
-//	}{
-//		{0, true, "http://localhost:8001/", "assets/", "public, maxAge=1"},
-//		{0, false, "http://localhost:8001/img/", "assets/img/", "public, maxAge=1"},
-//		{3, false, "http://localhost:8001/x/y/z/img/", "assets/img/", "public, maxAge=1"},
-//	}
-//
-//	for _, test := range cases {
-//		etag := ""
-//		if test.expectEtag {
-//			etag = etagFor(test.path + "index.html")
-//		}
-//		url := mustUrl(test.url)
-//		request := &http.Request{Method: "GET", URL: url}
-//		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(time.Second)
-//		headers := make(http.Header)
-//
-//		resource, code, message := a.chooseResource(headers, request)
-//
-//		isEqual(t, code, 100, test.path)
-//		isEqual(t, message, "", test.path)
-//		isEqual(t, len(headers["Expires"]), 1, test.path)
-//		isGte(t, len(headers["Expires"][0]), 25, test.path)
-//		//fmt.Println(headers["Expires"])
-//		isEqual(t, resource, test.path+"index.html", test.path)
-//		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
-//		if test.expectEtag {
-//			isEqual(t, headers["Etag"], []string{etag}, test.path)
-//		} else {
-//			isEqual(t, headers["Etag"], emptyStrings, test.path)
-//		}
-//	}
-//}
 
 func TestChooseResourceSimpleNoGzip(t *testing.T) {
 	cases := []struct {
@@ -278,6 +241,8 @@ func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+
 type h404 struct{}
 
 func (h *h404) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -309,6 +274,55 @@ func Test404Handler(t *testing.T) {
 		isEqual(t, w.Body.String(), test.response, i)
 	}
 }
+
+func Test403Handling(t *testing.T) {
+	cases := []struct {
+		path   string
+		header http.Header
+	}{
+		{"http://localhost:8001/css/style1.css", newHeader()},
+		{"http://localhost:8001/css/style1.css", newHeader("Accept-Encoding", "gzip")},
+	}
+
+	for i, test := range cases {
+		url := mustUrl("http://localhost:8001" + test.path)
+		request := &http.Request{Method: "GET", URL: url, Header: test.header}
+		a := NewAssetHandlerFS(&fs403{os.ErrPermission})
+		w := httptest.NewRecorder()
+
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, 403, i)
+		isEqual(t, w.Header().Get("Content-Type"), "text/plain; charset=utf-8", i)
+		isEqual(t, w.Body.String(), "403 Forbidden\n", i)
+	}
+}
+
+func Test503Handling(t *testing.T) {
+	cases := []struct {
+		path   string
+		header http.Header
+	}{
+		{"http://localhost:8001/css/style1.css", newHeader()},
+		{"http://localhost:8001/css/style1.css", newHeader("Accept-Encoding", "gzip")},
+	}
+
+	for i, test := range cases {
+		url := mustUrl("http://localhost:8001" + test.path)
+		request := &http.Request{Method: "GET", URL: url, Header: test.header}
+		a := NewAssetHandlerFS(&fs403{os.ErrInvalid})
+		w := httptest.NewRecorder()
+
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, 503, i)
+		isEqual(t, w.Header().Get("Content-Type"), "text/plain; charset=utf-8", i)
+		isNotEqual(t, w.Header().Get("Retry-After"), "", i)
+		isEqual(t, w.Body.String(), "503 Service unavailable\n", i)
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
 
 func TestServeHTTP304(t *testing.T) {
 	cases := []struct {
@@ -362,31 +376,31 @@ func TestServeHTTP304(t *testing.T) {
 
 //-------------------------------------------------------------------------------------------------
 
-func Benchmark1(t *testing.B) {
-	//os.Chdir("test")
+func Benchmark(t *testing.B) {
+	t.StopTimer()
 
 	cases := []struct {
-		strip    int
-		url, enc string
+		strip       int
+		url, enc    string
 		sendEtagFor string
-		code     int
+		code        int
 	}{
-		{0, "css/style1.css", "gzip", "", 200},     // has Gzip
-		{1, "a/css/style1.css", "gzip", "", 200},   // has Gzip
-		{2, "a/b/css/style1.css", "gzip", "", 200}, // has Gzip
-		{2, "a/b/css/style1.css", "xxxx", "", 200},  // has Gzip
-		{2, "a/b/css/style1.css", "gzip", "assets/css/style1.css.gz", 304},  // has Gzip
-		{2, "a/b/css/style1.css", "xxxx", "assets/css/style1.css", 304}, // has Gzip
+		{0, "css/style1.css", "gzip", "", 200},                             // has Gzip
+		{1, "a/css/style1.css", "gzip", "", 200},                           // has Gzip
+		{2, "a/b/css/style1.css", "gzip", "", 200},                         // has Gzip
+		{2, "a/b/css/style1.css", "xxxx", "", 200},                         // has Gzip
+		{2, "a/b/css/style1.css", "gzip", "assets/css/style1.css.gz", 304}, // has Gzip
+		{2, "a/b/css/style1.css", "xxxx", "assets/css/style1.css", 304},    // has Gzip
 
 		{2, "a/b/css/style2.css", "gzip", "", 200},
 		{2, "a/b/css/style2.css", "xxxx", "", 200},
 		{2, "a/b/css/style2.css", "gzip", "assets/css/style2.css", 304},
 		{2, "a/a/css/style2.css", "xxxx", "assets/css/style2.css", 304},
 
-		{2, "a/b/js/script1.js", "gzip", "", 200}, // has gzip
-		{2, "a/b/js/script1.js", "xxxx", "", 200},  // has gzip
-		{2, "a/b/js/script1.js", "gzip", "assets/js/script1.js.gz", 304},  // has gzip
-		{2, "a/a/js/script1.js", "xxxx", "assets/js/script1.js", 304},   // has gzip
+		{2, "a/b/js/script1.js", "gzip", "", 200},                        // has gzip
+		{2, "a/b/js/script1.js", "xxxx", "", 200},                        // has gzip
+		{2, "a/b/js/script1.js", "gzip", "assets/js/script1.js.gz", 304}, // has gzip
+		{2, "a/a/js/script1.js", "xxxx", "assets/js/script1.js", 304},    // has gzip
 
 		{2, "a/b/js/script2.js", "gzip", "", 200},
 		{2, "a/b/js/script2.js", "xxxx", "", 200},
@@ -434,34 +448,6 @@ func Benchmark1(t *testing.B) {
 			})
 		}
 	}
-
-	t.Run("ensemble", func(b *testing.B) {
-		for _, test := range cases {
-			header := newHeader("Accept-Encoding", test.enc)
-			if test.sendEtagFor != "" {
-				header = newHeader("Accept-Encoding", test.enc, "If-None-Match", etagFor(test.sendEtagFor))
-			}
-
-			for _, age := range ages {
-				for i := 0; i < b.N; i++ {
-					b.StopTimer()
-
-					url := mustUrl("http://localhost:8001/" + test.url)
-					request := &http.Request{Method: "GET", URL: url, Header: header}
-					a := NewAssetHandler("./assets/").StripOff(test.strip).WithMaxAge(age)
-					w := httptest.NewRecorder()
-
-					b.StartTimer()
-					a.ServeHTTP(w, request)
-					b.StopTimer()
-
-					if w.Code != test.code {
-						b.Fatalf("Expected %d but got %d", test.code, w.Code)
-					}
-				}
-			}
-		}
-	})
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -470,6 +456,13 @@ func isEqual(t *testing.T, a, b, hint interface{}) {
 	t.Helper()
 	if !reflect.DeepEqual(a, b) {
 		t.Errorf("Got %#v; expected %#v - for %v\n", a, b, hint)
+	}
+}
+
+func isNotEqual(t *testing.T, a, b, hint interface{}) {
+	t.Helper()
+	if reflect.DeepEqual(a, b) {
+		t.Errorf("Got %#v; expected something else - for %v\n", a, hint)
 	}
 }
 
@@ -518,4 +511,58 @@ func etagFor(name string) string {
 		t = "W/" // weak etag
 	}
 	return fmt.Sprintf(`%s"%x-%x"`, t, d.ModTime().Unix(), d.Size())
+}
+
+//-------------------------------------------------------------------------------------------------
+
+type fs403 struct {
+	err error
+}
+
+func (fs fs403) Create(name string) (afero.File, error) {
+	return nil, fs.err
+}
+
+func (fs fs403) Mkdir(name string, perm os.FileMode) error {
+	return fs.err
+}
+
+func (fs fs403) MkdirAll(path string, perm os.FileMode) error {
+	return fs.err
+}
+
+func (fs fs403) Open(name string) (afero.File, error) {
+	return nil, fs.err
+}
+
+func (fs fs403) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+	return nil, fs.err
+}
+
+func (fs fs403) Remove(name string) error {
+	return fs.err
+}
+
+func (fs fs403) RemoveAll(path string) error {
+	return fs.err
+}
+
+func (fs fs403) Rename(oldname, newname string) error {
+	return fs.err
+}
+
+func (fs fs403) Stat(name string) (os.FileInfo, error) {
+	return nil, fs.err
+}
+
+func (fs403) Name() string {
+	return "dumb"
+}
+
+func (fs fs403) Chmod(name string, mode os.FileMode) error {
+	return fs.err
+}
+
+func (fs fs403) Chtimes(name string, atime time.Time, mtime time.Time) error {
+	return fs.err
 }
