@@ -1,0 +1,53 @@
+goos: darwin
+goarch: amd64
+pkg: github.com/rickb777/servefiles
+Benchmark/css/style1.css~gzip~no-etag~200~0s-4         	   30000	     41937 ns/op
+Benchmark/css/style1.css~gzip~no-etag~200~1h0m0s-4     	   30000	     41844 ns/op
+Benchmark/a/css/style1.css~gzip~no-etag~200~0s-4       	   30000	     42630 ns/op
+Benchmark/a/css/style1.css~gzip~no-etag~200~1h0m0s-4   	   30000	     42838 ns/op
+Benchmark/a/b/css/style1.css~gzip~no-etag~200~0s-4     	   30000	     39574 ns/op
+Benchmark/a/b/css/style1.css~gzip~no-etag~200~1h0m0s-4 	   30000	     42455 ns/op
+Benchmark/a/b/css/style1.css~xxxx~no-etag~200~0s-4     	   30000	     44033 ns/op
+Benchmark/a/b/css/style1.css~xxxx~no-etag~200~1h0m0s-4 	   30000	     42062 ns/op
+Benchmark/a/b/css/style1.css~gzip~etag~304~0s-4        	   50000	     36309 ns/op
+Benchmark/a/b/css/style1.css~gzip~etag~304~1h0m0s-4    	   50000	     36692 ns/op
+Benchmark/a/b/css/style1.css~xxxx~etag~304~0s-4        	   50000	     32135 ns/op
+Benchmark/a/b/css/style1.css~xxxx~etag~304~1h0m0s-4    	   50000	     36210 ns/op
+Benchmark/a/b/css/style2.css~gzip~no-etag~200~0s-4     	   30000	     41437 ns/op
+Benchmark/a/b/css/style2.css~gzip~no-etag~200~1h0m0s-4 	   30000	     45077 ns/op
+Benchmark/a/b/css/style2.css~xxxx~no-etag~200~0s-4     	   30000	     43012 ns/op
+Benchmark/a/b/css/style2.css~xxxx~no-etag~200~1h0m0s-4 	   30000	     40768 ns/op
+Benchmark/a/b/css/style2.css~gzip~etag~304~0s-4        	   50000	     36847 ns/op
+Benchmark/a/b/css/style2.css~gzip~etag~304~1h0m0s-4    	   30000	     41054 ns/op
+Benchmark/a/a/css/style2.css~xxxx~etag~304~0s-4        	   50000	     39224 ns/op
+Benchmark/a/a/css/style2.css~xxxx~etag~304~1h0m0s-4    	   50000	     43238 ns/op
+Benchmark/a/b/js/script1.js~gzip~no-etag~200~0s-4      	   30000	     43094 ns/op
+Benchmark/a/b/js/script1.js~gzip~no-etag~200~1h0m0s-4  	   30000	     43024 ns/op
+Benchmark/a/b/js/script1.js~xxxx~no-etag~200~0s-4      	   30000	     42476 ns/op
+Benchmark/a/b/js/script1.js~xxxx~no-etag~200~1h0m0s-4  	   30000	     41840 ns/op
+Benchmark/a/b/js/script1.js~gzip~etag~304~0s-4         	   50000	     34484 ns/op
+Benchmark/a/b/js/script1.js~gzip~etag~304~1h0m0s-4     	   50000	     35997 ns/op
+Benchmark/a/a/js/script1.js~xxxx~etag~304~0s-4         	   50000	     31865 ns/op
+Benchmark/a/a/js/script1.js~xxxx~etag~304~1h0m0s-4     	   50000	     35115 ns/op
+Benchmark/a/b/js/script2.js~gzip~no-etag~200~0s-4      	   30000	     41079 ns/op
+Benchmark/a/b/js/script2.js~gzip~no-etag~200~1h0m0s-4  	   30000	     43604 ns/op
+Benchmark/a/b/js/script2.js~xxxx~no-etag~200~0s-4      	   30000	     42144 ns/op
+Benchmark/a/b/js/script2.js~xxxx~no-etag~200~1h0m0s-4  	   30000	     43594 ns/op
+Benchmark/a/b/js/script2.js~gzip~etag~304~0s-4         	   50000	     51269 ns/op
+Benchmark/a/b/js/script2.js~gzip~etag~304~1h0m0s-4     	   30000	     53262 ns/op
+Benchmark/a/a/js/script2.js~xxxx~etag~304~0s-4         	   30000	     50651 ns/op
+Benchmark/a/a/js/script2.js~xxxx~etag~304~1h0m0s-4     	   30000	     59132 ns/op
+Benchmark/a/b/img/sort_asc.png~gzip~no-etag~200~0s-4   	   20000	     50991 ns/op
+Benchmark/a/b/img/sort_asc.png~gzip~no-etag~200~1h0m0s-4         	   30000	     54515 ns/op
+Benchmark/a/b/img/sort_asc.png~xxxx~no-etag~200~0s-4             	   30000	     47008 ns/op
+Benchmark/a/b/img/sort_asc.png~xxxx~no-etag~200~1h0m0s-4         	   30000	     47514 ns/op
+Benchmark/a/b/img/sort_asc.png~gzip~etag~304~0s-4                	   30000	     43867 ns/op
+Benchmark/a/b/img/sort_asc.png~gzip~etag~304~1h0m0s-4            	   30000	     52453 ns/op
+Benchmark/a/a/img/sort_asc.png~xxxx~etag~304~0s-4                	   30000	     37405 ns/op
+Benchmark/a/a/img/sort_asc.png~xxxx~etag~304~1h0m0s-4            	   50000	     37925 ns/op
+Benchmark/a/b/img/nonexisting.png~gzip~no-etag~404~0s-4          	  200000	     10960 ns/op
+Benchmark/a/b/img/nonexisting.png~gzip~no-etag~404~1h0m0s-4      	  100000	     12034 ns/op
+Benchmark/a/b/img/nonexisting.png~xxxx~no-etag~404~0s-4          	  200000	      8101 ns/op
+Benchmark/a/b/img/nonexisting.png~xxxx~no-etag~404~1h0m0s-4      	  200000	      9615 ns/op
+PASS
+ok  	github.com/rickb777/servefiles	150.110s
