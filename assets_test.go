@@ -48,29 +48,6 @@ func init() {
 	mustChdir("test")
 }
 
-func TestRemoveUnwantedSegments(t *testing.T) {
-	cases := []struct {
-		n               int
-		input, expected string
-	}{
-		{0, "/a/b/c/x.png", "/a/b/c/x.png"},
-		{1, "/a/b/c/x.png", "/b/c/x.png"},
-		{2, "/a/b/c/x.png", "/c/x.png"},
-		{3, "/a/b/c/x.png", "/x.png"},
-		{4, "/a/b/c/x.png", "/"},
-		{3, "/a/b/c/", "/"},
-		{4, "/a/b/c/", "/"},
-	}
-
-	for _, test := range cases {
-		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(time.Hour)
-
-		p0 := a.removeUnwantedSegments(test.input)
-
-		isEqual(t, p0, test.expected, test.input)
-	}
-}
-
 func TestChooseResourceSimpleNoGzip(t *testing.T) {
 	cases := []struct {
 		n                       int

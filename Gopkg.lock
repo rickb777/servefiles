@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/rickb777/path"
+  packages = ["."]
+  revision = "0c4a50525eb059eb482a086057eaf8efa3a3f30d"
+  version = "v0.7.0"
+
+[[projects]]
   name = "github.com/spf13/afero"
   packages = [
     ".",
@@ -26,6 +32,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c466a95c53d311da306451d27a82f5e5b104f4f41b393c17fd25716ec282c314"
+  inputs-digest = "2baf699c202832b746ea50550dafb8be0228ccd9a54bf16c41b18bd92c20c571"
   solver-name = "gps-cdcl"
   solver-version = 1

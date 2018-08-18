@@ -29,13 +29,13 @@ import (
 	"mime"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 	"github.com/spf13/afero"
+	"github.com/rickb777/path"
 )
 
 // This needs to track the same string in net/http (which is unlikely ever to change)
@@ -148,20 +148,6 @@ func (a *Assets) expires() string {
 	return a.timestampExpiry
 }
 
-func (a *Assets) removeUnwantedSegments(path string) string {
-	for i := a.UnwantedPrefixSegments; i > 0; i-- {
-		slash := strings.IndexByte(path[1:], '/') + 1
-		if slash <= 0 {
-			debugf("removeUnwantedSegments => /\n")
-			return "/"
-		}
-		debugf("removeUnwantedSegments %d %d %s\n", i, slash, path)
-		path = path[slash:]
-	}
-	debugf("removeUnwantedSegments = %s\n", path)
-	return path
-}
-
 //-------------------------------------------------------------------------------------------------
 
 type fileData struct {
@@ -213,7 +199,7 @@ func (a *Assets) checkResource(resource string, header http.Header) fileData {
 }
 
 func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, code) {
-	resource := a.removeUnwantedSegments(req.URL.Path)
+	resource := path.Drop(req.URL.Path, a.UnwantedPrefixSegments)
 	if strings.HasSuffix(resource, "/") {
 		resource += indexPage
 	}
