@@ -75,6 +75,7 @@ var _ http.Handler = &Assets{}
 // This function cleans (i.e. normalises) the asset path.
 func NewAssetHandler(assetPath string) *Assets {
 	cleanAssetPath := cleanPathAndAppendSlash(assetPath)
+	Debugf("NewAssetHandler %s\n", cleanAssetPath)
 	fs := afero.NewBasePathFs(afero.NewOsFs(), cleanAssetPath)
 	return NewAssetHandlerFS(fs)
 }
@@ -167,8 +168,6 @@ func handleSaturatedServer(header http.Header, resource string, err error) fileD
 	// Possibly the server is under heavy load and ran out of file descriptors
 	backoff := 2 + rand.Int31()%4 // 2–6 seconds to prevent a stampede
 	header.Set("Retry-After", strconv.Itoa(int(backoff)))
-	//log.Printf("Failed to stat %s: %v\n", resource, err)
-	debugf("handleSaturatedServer 503 %s\n", resource)
 	return fileData{resource, ServiceUnavailable, nil}
 }
 
@@ -177,15 +176,16 @@ func (a *Assets) checkResource(resource string, header http.Header) fileData {
 	if err != nil {
 		if os.IsNotExist(err) {
 			// gzipped does not exist; original might but this gets checked later
-			debugf("checkResource 404 %s\n", resource)
+			Debugf("Assets checkResource 404 %s\n", resource)
 			return fileData{"", NotFound, nil}
 
 		} else if os.IsPermission(err) {
 			// incorrectly assembled gzipped asset is treated as an error
-			debugf("checkResource 403 %s\n", resource)
+			Debugf("Assets checkResource 403 %s\n", resource)
 			return fileData{resource, Forbidden, nil}
 		}
 
+		Debugf("Assets handleSaturatedServer 503 %s\n", resource)
 		return handleSaturatedServer(header, resource, err)
 	}
 
@@ -194,7 +194,7 @@ func (a *Assets) checkResource(resource string, header http.Header) fileData {
 		return fileData{resource, Directory, nil}
 	}
 
-	debugf("checkResource 100 %s\n", resource)
+	Debugf("Assets checkResource 100 %s\n", resource)
 	return fileData{resource, Continue, d}
 }
 
@@ -203,7 +203,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 	if strings.HasSuffix(resource, "/") {
 		resource += indexPage
 	}
-	debugf("chooseResource %s %s %s\n", req.Method, req.URL.Path, resource)
+	Debugf("Assets chooseResource %s %s %s\n", req.Method, req.URL.Path, resource)
 
 	if a.MaxAge > 0 {
 		header.Set("Expires", a.expires())
@@ -243,10 +243,10 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 // ServeHTTP implements the http.Handler interface.
 func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resource, code := a.chooseResource(w.Header(), req)
-	debugf("ServeHTTP %s %s %+v -> %d %s\n", req.Method, req.URL.Path, req.Header, code, resource)
 
 	if code == NotFound && a.NotFound != nil {
-		debugf("ServeFile (2) %s %s W:%+v\n", req.Method, req.URL.Path, w.Header())
+		// use the provided not-found handler
+		Debugf("Assets ServeHTTP (not found) %s %s R:%+v W:%+v\n", req.Method, req.URL.Path, req.Header, w.Header())
 
 		// ww has silently dropped the headers and body from the built-in handler in this case,
 		// so complete the response using the original handler.
@@ -256,16 +256,18 @@ func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if code >= 400 {
+		Debugf("Assets ServeHTTP (error %d) %s %s R:%+v W:%+v\n", code, req.Method, req.URL.Path, req.Header, w.Header())
 		http.Error(w, code.String(), int(code))
 		return
 	}
 
+	original := req.URL.Path
 	req.URL.Path = resource
 
-	// Conditional requests and content negotiation are handled in ServeFile.
+	// Conditional requests and content negotiation are handled in the standard net/http API.
 	// Note that req.URL remains unchanged, even if prefix stripping is turned on, because the resource is
 	// the only value that matters.
-	debugf("ServeFile (1) %s %s W:%+v\n", req.Method, req.URL.Path, w.Header())
+	Debugf("Assets ServeHTTP (ok %d) %s %s (was %s) R:%+v W:%+v\n", code, req.Method, req.URL.Path, original, req.Header, w.Header())
 	a.server.ServeHTTP(w, req)
 }
 
@@ -274,6 +276,15 @@ func cleanPathAndAppendSlash(s string) string {
 	return string(append([]byte(clean), '/'))
 }
 
-func debugf(msg string, args ...interface{}) {
-	//fmt.Printf(msg, args...)
-}
+//-------------------------------------------------------------------------------------------------
+
+// Printer is something that allows formatted printing. This is only used for diagnostics.
+type Printer func(format string, v ...interface{})
+
+// Debugf is a function that allows diagnostics to be emitted. By default it does very
+// little and has almost no impact. Set it to some other function (e.g. using log.Printf) to
+// see the diagnostics.
+var Debugf Printer = func(format string, v ...interface{}) {}
+
+// example (paste this into setup code elsewhere)
+//var servefiles.Debugf Printer = log.Printf
