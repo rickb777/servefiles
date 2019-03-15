@@ -214,9 +214,9 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 	if acceptEncoding.Contains("br") {
 		brotli := resource + ".br"
 
-		fdgz := a.checkResource(brotli, header)
+		fdbr := a.checkResource(brotli, header)
 
-		if fdgz.code == Continue {
+		if fdbr.code == Continue {
 			ext := filepath.Ext(resource)
 			header.Set("Content-Type", mime.TypeByExtension(ext))
 			// the standard library sometimes overrides the content type via sniffing
@@ -224,7 +224,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 			header.Set("Content-Encoding", "br")
 			header.Add("Vary", "Accept-Encoding")
 			// weak etag because the representation is not the original file but a compressed variant
-			header.Set("ETag", "W/"+calculateEtag(fdgz.fi))
+			header.Set("ETag", "W/"+calculateEtag(fdbr.fi))
 			return brotli, Continue
 		}
 	}
