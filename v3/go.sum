@@ -1,0 +1,6 @@
+github.com/rickb777/path v0.15.0 h1:T3GndLort6GIFb4AOaKafEkYE2JEFoV2C7E9Vm/jjl0=
+github.com/rickb777/path v0.15.0/go.mod h1:ZKgQsDzXqqwuE5tdp6vFZ4jIYHYK32kDQvmrD9LLAFk=
+github.com/spf13/afero v1.2.1 h1:qgMbHoJbPbw579P+1zVY+6n4nIFuIchaIjzZ/I/Yq8M=
+github.com/spf13/afero v1.2.1/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
+golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
+golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=

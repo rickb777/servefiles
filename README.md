@@ -8,14 +8,20 @@
 
 Serve static files from a Go http server, including performance-enhancing features.
 
- * Based on the standard net/http ServeFiles, with gzip and cache performance enhancements.
+ * Based on the standard net/http ServeFiles, with gzip/brotli and cache performance enhancements.
 
 Please see the [GoDoc](https://godoc.org/github.com/rickb777/servefiles) for more.
 
 ## Installation
 
-    go get -u github.com/rickb777/servefiles
+    go get -u github.com/rickb777/servefiles/v3
 
+## v3
+
+Version 3 brings Go module support. Also, brotli encoding is supported alongside gzip encoding. Brotli now has widespread
+implementation in most browsers. You should compress your textual assets using Brotli as part of your build pipeline, uploading
+the original and compressed files (including Javascript, CSS, HTML, SVG etc) to your production server's asset directories.
+ 
 ## Status
 
 This library has been in reliable production use for some time. Versioning follows the well-known semantic version pattern.

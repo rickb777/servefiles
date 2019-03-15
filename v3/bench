@@ -1,0 +1,12 @@
+#!/bin/bash -e
+cd $(dirname $0)
+
+mkdir -p trend
+
+vsn=$(git describe --tags --dirty)
+file=trend/$vsn-$(date '+%Y%m%d').txt
+echo Writing results to $file
+
+export GO11MODULE=on
+
+go test -bench . | tee $file

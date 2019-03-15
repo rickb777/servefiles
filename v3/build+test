@@ -1,0 +1,17 @@
+#!/bin/bash -e
+cd $(dirname $0)
+PATH=$HOME/go/bin:$PATH
+
+export GO11MODULE=on
+
+go mod download
+
+if ! type -p goveralls; then
+  echo go install github.com/mattn/goveralls
+  go install github.com/mattn/goveralls
+fi
+
+go test -v -covermode=count -coverprofile=cover.out .
+go tool cover -func=cover.out
+[ -z "$COVERALLS_TOKEN" ] || goveralls -coverprofile=cover.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+rm cover.out

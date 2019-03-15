@@ -24,6 +24,6 @@ _testmain.go
 *.prof
 
 .idea/
+v3/.idea/
 reports/
-vendor/
 .DS_Store/
