@@ -18,9 +18,7 @@ Please see the [GoDoc](https://godoc.org/github.com/rickb777/servefiles) for mor
 
 ## v3
 
-Version 3 brings Go module support. Also, brotli encoding is supported alongside gzip encoding. Brotli now has widespread
-implementation in most browsers. You should compress your textual assets using Brotli as part of your build pipeline, uploading
-the original and compressed files (including Javascript, CSS, HTML, SVG etc) to your production server's asset directories.
+Version 3 brings Go module support. Also, `brotli` encoding is supported alongside `gzip` encoding. Brotli now has widespread implementation in most browsers. You can compress your textual assets (including Javascript, CSS, HTML, SVG etc) using Brotli and/or Gzip as part of your build pipeline, uploading both the original and compressed files to your production server's asset directories. Brotli compression takes longer than Gzip but produces more compact files. Compression is, of course, optional.
  
 ## Status
 

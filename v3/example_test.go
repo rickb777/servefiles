@@ -8,7 +8,7 @@ import (
 	"github.com/rickb777/servefiles/v3"
 )
 
-func Example() {
+func ExampleNewAssetHandler() {
 	// where the assets are stored
 	localPath := "."
 
