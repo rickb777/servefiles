@@ -22,7 +22,11 @@
 
 /*
 Package servefiles provides a static asset handler for serving files such as images, stylesheets and
-javascript code. This is an enhancement to the standard net/http ServeFiles, which is used internally.
+javascript code.
+
+This version is deprecated: please use v3 for new use cases.
+
+This asset handler is an enhancement to the standard net/http ServeFiles, which is used internally.
 Care is taken to set headers such that the assets will be efficiently cached by browsers and proxies.
 
     assets := servefiles.NewAssetHandler("./assets/").WithMaxAge(time.Hour)
