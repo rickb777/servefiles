@@ -10,7 +10,9 @@ import (
 	"github.com/rickb777/servefiles/v3"
 )
 
-func ExampleNewAssetHandler_simple_web_server() {
+func ExampleNewAssetHandler() {
+	// A simple webserver
+
 	// where the assets are stored (replace as required)
 	localPath := "."
 
@@ -24,7 +26,9 @@ func ExampleNewAssetHandler_simple_web_server() {
 	log.Fatal(http.ListenAndServe(":8080", h))
 }
 
-func ExampleNewAssetHandlerFS_simple_web_server() {
+func ExampleNewAssetHandlerFS() {
+	// A simple webserver
+
 	// where the assets are stored (replace as required)
 	fs := afero.NewOsFs()
 
