@@ -34,8 +34,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/spf13/afero"
+
 	"github.com/rickb777/path"
+	"github.com/spf13/afero"
 )
 
 // This needs to track the same string in net/http (which is unlikely ever to change)

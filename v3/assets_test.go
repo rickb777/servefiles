@@ -24,7 +24,6 @@ package servefiles
 
 import (
 	"fmt"
-	"github.com/spf13/afero"
 	"net/http"
 	"net/http/httptest"
 	. "net/url"
@@ -33,6 +32,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/afero"
 )
 
 var emptyStrings []string

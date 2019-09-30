@@ -9,4 +9,6 @@ echo Writing results to $file
 
 export GO11MODULE=on
 
-go test -bench . | tee $file
+uname -mors      | tee $file
+go version       | tee -a $file
+go test -bench . | tee -a $file
