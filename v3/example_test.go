@@ -14,7 +14,7 @@ func ExampleNewAssetHandler() {
 	// A simple webserver
 
 	// where the assets are stored (replace as required)
-	localPath := "."
+	localPath := "./assets"
 
 	// how long we allow user agents to cache assets
 	// (this is in addition to conditional requests, see

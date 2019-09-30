@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Package main provides a webserver. The purpose is mostly to show by example how to serve assets.
+// This package provides an example webserver. The purpose is mostly to show by example how to serve assets.
 // It supports both HTTP and HTTPS.
 package main
 
