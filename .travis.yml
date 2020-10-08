@@ -1,11 +1,10 @@
 language: go
 
 go:
-  - tip
+  - '1.15'
 
 install:
   - go get github.com/mattn/goveralls
 
 script:
   - ./build+test
-  - ./v3/build+test

@@ -32,6 +32,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+
 	"github.com/spf13/afero"
 )
 
@@ -109,20 +110,20 @@ func TestChooseResourceSimpleNonExistent(t *testing.T) {
 
 func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 	cases := []struct {
-		n                             int
-		maxAge                        time.Duration
-		url, mime, path, cacheControl string
+		n                                       int
+		maxAge                                  time.Duration
+		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "assets/css/style1.css.gz", "public, maxAge=1"},
-		{2, 1, "http://localhost:8001/a/b/css/style1.css", "text/css; charset=utf-8", "assets/css/style1.css.gz", "public, maxAge=1"},
-		{0, 1, "http://localhost:8001/js/script1.js", "application/javascript", "assets/js/script1.js.gz", "public, maxAge=1"},
-		{2, 1, "http://localhost:8001/a/b/js/script1.js", "application/javascript", "assets/js/script1.js.gz", "public, maxAge=1"},
+		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
+		{2, 1, "http://localhost:8001/a/b/css/style1.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
+		{0, 1, "http://localhost:8001/js/script1.js", "application/javascript", "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
+		{2, 1, "http://localhost:8001/a/b/js/script1.js", "application/javascript", "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
 	}
 
 	for _, test := range cases {
 		etag := etagFor(test.path)
 		url := mustUrl(test.url)
-		header := newHeader("Accept-Encoding", "xxxx, gzip, zzz")
+		header := newHeader("Accept-Encoding", test.encoding)
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		w := httptest.NewRecorder()
@@ -138,7 +139,44 @@ func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		isEqual(t, headers["X-Content-Type-Options"], []string{"nosniff"}, test.path)
 		isEqual(t, headers["Content-Encoding"], []string{"gzip"}, test.path)
 		isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, test.path)
-		isEqual(t, headers["Etag"], []string{etag}, test.path)
+		isEqual(t, headers["Etag"], []string{"W/" + etag}, test.path)
+		isEqual(t, len(headers["Expires"]), 1, test.path)
+		isGte(t, len(headers["Expires"][0]), 25, test.path)
+	}
+}
+
+func TestServeHTTP200WithBrAndBrWithAcceptHeader(t *testing.T) {
+	cases := []struct {
+		n                                       int
+		maxAge                                  time.Duration
+		url, mime, encoding, path, cacheControl string
+	}{
+		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
+		{2, 1, "http://localhost:8001/a/b/css/style1.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
+		{0, 1, "http://localhost:8001/js/script1.js", "application/javascript", "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
+		{2, 1, "http://localhost:8001/a/b/js/script1.js", "application/javascript", "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
+	}
+
+	for _, test := range cases {
+		etag := etagFor(test.path)
+		url := mustUrl(test.url)
+		header := newHeader("Accept-Encoding", test.encoding)
+		request := &http.Request{Method: "GET", URL: url, Header: header}
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
+		w := httptest.NewRecorder()
+
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, 200, test.path)
+		headers := w.Header()
+		//t.Logf("%+v\n", headers)
+		isGte(t, len(headers), 7, test.path)
+		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
+		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
+		isEqual(t, headers["X-Content-Type-Options"], []string{"nosniff"}, test.path)
+		isEqual(t, headers["Content-Encoding"], []string{"br"}, test.path)
+		isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, test.path)
+		isEqual(t, headers["Etag"], []string{"W/" + etag}, test.path)
 		isEqual(t, len(headers["Expires"]), 1, test.path)
 		isGte(t, len(headers["Expires"][0]), 25, test.path)
 	}
@@ -146,20 +184,20 @@ func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 
 func TestServeHTTP200WithGzipButNoAcceptHeader(t *testing.T) {
 	cases := []struct {
-		n                             int
-		maxAge                        time.Duration
-		url, mime, path, cacheControl string
+		n                                       int
+		maxAge                                  time.Duration
+		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "assets/css/style1.css", "public, maxAge=1"},
-		{2, 2, "http://localhost:8001/a/b/css/style1.css", "text/css; charset=utf-8", "assets/css/style1.css", "public, maxAge=2"},
-		{0, 3, "http://localhost:8001/js/script1.js", "application/javascript", "assets/js/script1.js", "public, maxAge=3"},
-		{2, 4, "http://localhost:8001/a/b/js/script1.js", "application/javascript", "assets/js/script1.js", "public, maxAge=4"},
+		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=1"},
+		{2, 2, "http://localhost:8001/a/b/css/style1.css", "text/css; charset=utf-8", "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=2"},
+		{0, 3, "http://localhost:8001/js/script1.js", "application/javascript", "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=3"},
+		{2, 4, "http://localhost:8001/a/b/js/script1.js", "application/javascript", "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=4"},
 	}
 
 	for _, test := range cases {
 		etag := etagFor(test.path)
 		url := mustUrl(test.url)
-		header := newHeader("Accept-Encoding", "xxxx, yyy, zzz")
+		header := newHeader("Accept-Encoding", test.encoding)
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		w := httptest.NewRecorder()
@@ -182,22 +220,28 @@ func TestServeHTTP200WithGzipButNoAcceptHeader(t *testing.T) {
 
 func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 	cases := []struct {
-		n                             int
-		maxAge                        time.Duration
-		url, mime, path, cacheControl string
+		n                                       int
+		maxAge                                  time.Duration
+		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/css/style2.css", "text/css; charset=utf-8", "assets/css/style2.css", "public, maxAge=1"},
-		{2, 2, "http://localhost:8001/a/b/css/style2.css", "text/css; charset=utf-8", "assets/css/style2.css", "public, maxAge=2"},
-		{0, 3, "http://localhost:8001/js/script2.js", "application/javascript", "assets/js/script2.js", "public, maxAge=3"},
-		{2, 4, "http://localhost:8001/a/b/js/script2.js", "application/javascript", "assets/js/script2.js", "public, maxAge=4"},
-		{0, 5, "http://localhost:8001/img/sort_asc.png", "image/png", "assets/img/sort_asc.png", "public, maxAge=5"},
-		{2, 6, "http://localhost:8001/a/b/img/sort_asc.png", "image/png", "assets/img/sort_asc.png", "public, maxAge=6"},
+		{0, 1, "http://localhost:8001/css/style2.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
+		{0, 1, "http://localhost:8001/css/style2.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
+		{2, 2, "http://localhost:8001/a/b/css/style2.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
+		{2, 2, "http://localhost:8001/a/b/css/style2.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
+		{0, 3, "http://localhost:8001/js/script2.js", "application/javascript", "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
+		{0, 3, "http://localhost:8001/js/script2.js", "application/javascript", "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
+		{2, 4, "http://localhost:8001/a/b/js/script2.js", "application/javascript", "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
+		{2, 4, "http://localhost:8001/a/b/js/script2.js", "application/javascript", "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
+		{0, 5, "http://localhost:8001/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
+		{0, 5, "http://localhost:8001/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
+		{2, 6, "http://localhost:8001/a/b/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=6"},
+		{2, 6, "http://localhost:8001/a/b/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=6"},
 	}
 
 	for _, test := range cases {
 		etag := etagFor(test.path)
 		url := mustUrl(test.url)
-		header := newHeader("Accept-Encoding", "xxxx, gzip, zzz")
+		header := newHeader("Accept-Encoding", test.encoding)
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		w := httptest.NewRecorder()
@@ -303,20 +347,24 @@ func Test503Handling(t *testing.T) {
 
 func TestServeHTTP304(t *testing.T) {
 	cases := []struct {
-		url, path string
-		notFound  http.Handler
+		url, path, encoding string
+		notFound            http.Handler
 	}{
-		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.gz", nil},
-		{"http://localhost:8001/css/style2.css", "assets/css/style2.css", nil},
-		{"http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", nil},
-		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.gz", nil},
-		{"http://localhost:8001/js/script2.js", "assets/js/script2.js", nil},
+		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.gz", "gzip", nil},
+		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.br", "br", nil},
+		{"http://localhost:8001/css/style2.css", "assets/css/style2.css", "xx", nil},
+		{"http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "xx", nil},
+		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.gz", "gzip", nil},
+		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.br", "br", nil},
+		{"http://localhost:8001/js/script2.js", "assets/js/script2.js", "xx", nil},
 
-		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.gz", &h404{}},
-		{"http://localhost:8001/css/style2.css", "assets/css/style2.css", &h404{}},
-		{"http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", &h404{}},
-		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.gz", &h404{}},
-		{"http://localhost:8001/js/script2.js", "assets/js/script2.js", &h404{}},
+		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.gz", "gzip", &h404{}},
+		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.br", "br", &h404{}},
+		{"http://localhost:8001/css/style2.css", "assets/css/style2.css", "xx", &h404{}},
+		{"http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "xx", &h404{}},
+		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.gz", "gzip", &h404{}},
+		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.br", "br", &h404{}},
+		{"http://localhost:8001/js/script2.js", "assets/js/script2.js", "xx", &h404{}},
 	}
 
 	// net/http serveFiles handles conditional requests according to RFC723x specs.
@@ -325,7 +373,7 @@ func TestServeHTTP304(t *testing.T) {
 	for i, test := range cases {
 		etag := etagFor(test.path)
 		url := mustUrl(test.url)
-		header := newHeader("Accept-Encoding", "gzip", "If-None-Match", etag)
+		header := newHeader("Accept-Encoding", test.encoding, "If-None-Match", etag)
 		request := &http.Request{Method: "GET", URL: url, Header: header}
 		a := NewAssetHandler("./assets/").WithNotFound(test.notFound)
 		w := httptest.NewRecorder()
@@ -342,7 +390,11 @@ func TestServeHTTP304(t *testing.T) {
 		if strings.HasSuffix(test.path, ".gz") {
 			isEqual(t, headers["Content-Encoding"], []string{"gzip"}, i)
 			isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, i)
-			isEqual(t, headers["Etag"], []string{etag}, i)
+			isEqual(t, headers["Etag"], []string{"W/" + etag}, i)
+		} else if strings.HasSuffix(test.path, ".br") {
+			isEqual(t, headers["Content-Encoding"], []string{"br"}, i)
+			isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, i)
+			isEqual(t, headers["Etag"], []string{"W/" + etag}, i)
 		} else {
 			isEqual(t, headers["Content-Encoding"], emptyStrings, i)
 			isEqual(t, headers["Vary"], emptyStrings, i)
@@ -363,10 +415,14 @@ func Benchmark(t *testing.B) {
 		code        int
 	}{
 		{0, "css/style1.css", "gzip", "", 200},                             // has Gzip
+		{0, "css/style1.css", "br", "", 200},                               // has Brotli
 		{1, "a/css/style1.css", "gzip", "", 200},                           // has Gzip
+		{1, "a/css/style1.css", "br", "", 200},                             // has Brotli
 		{2, "a/b/css/style1.css", "gzip", "", 200},                         // has Gzip
+		{2, "a/b/css/style1.css", "br", "", 200},                           // has Brotli
 		{2, "a/b/css/style1.css", "xxxx", "", 200},                         // has Gzip
 		{2, "a/b/css/style1.css", "gzip", "assets/css/style1.css.gz", 304}, // has Gzip
+		{2, "a/b/css/style1.css", "br", "assets/css/style1.css.br", 304},   // has Brotli
 		{2, "a/b/css/style1.css", "xxxx", "assets/css/style1.css", 304},    // has Gzip
 
 		{2, "a/b/css/style2.css", "gzip", "", 200},
@@ -375,8 +431,10 @@ func Benchmark(t *testing.B) {
 		{2, "a/a/css/style2.css", "xxxx", "assets/css/style2.css", 304},
 
 		{2, "a/b/js/script1.js", "gzip", "", 200},                        // has gzip
+		{2, "a/b/js/script1.js", "br", "", 200},                          // has Brotli
 		{2, "a/b/js/script1.js", "xxxx", "", 200},                        // has gzip
 		{2, "a/b/js/script1.js", "gzip", "assets/js/script1.js.gz", 304}, // has gzip
+		{2, "a/b/js/script1.js", "br", "assets/js/script1.js.br", 304},   // has Brotli
 		{2, "a/a/js/script1.js", "xxxx", "assets/js/script1.js", 304},    // has gzip
 
 		{2, "a/b/js/script2.js", "gzip", "", 200},
@@ -484,9 +542,6 @@ func mustStat(name string) os.FileInfo {
 func etagFor(name string) string {
 	d := mustStat(name)
 	t := ""
-	if strings.HasSuffix(name, ".gz") {
-		t = "W/" // weak etag
-	}
 	return fmt.Sprintf(`%s"%x-%x"`, t, d.ModTime().Unix(), d.Size())
 }
 

@@ -1,19 +1,34 @@
 #!/bin/bash -e
-cd $(dirname $0)
-PATH=$HOME/gopath/bin:$GOPATH/bin:$PATH
+cd "$(dirname $0)"
+PATH=$HOME/go/bin:$PATH
+unset GOPATH
+export GO111MODULE=on
 
-if ! type -p dep; then
-  echo go get github.com/golang/dep/cmd/dep
-  go get github.com/golang/dep/cmd/dep
-fi
+function announce
+{
+  echo
+  echo $@
+}
+
+function v
+{
+  announce $@
+  $@
+}
 
 if ! type -p goveralls; then
-  echo go get github.com/mattn/goveralls
-  go get github.com/mattn/goveralls
+  v go install github.com/mattn/goveralls
 fi
 
-[ -d vendor/github.com/spf13/afero ] || dep ensure
+if ! type -p goreturns; then
+  v go install github.com/sqs/goreturns
+fi
+
 go test -v -covermode=count -coverprofile=cover.out .
 go tool cover -func=cover.out
-[ -z "$COVERALLS_TOKEN" ] || goveralls -coverprofile=cover.out -service=travis-ci -repotoken $COVERALLS_TOKEN
+[ -z "$COVERALLS_TOKEN" ] || goveralls -coverprofile=cover.out -service=travis-ci -repotoken $COVERALLS_TOKEN || echo 'Coult not push to coveralls'
 rm cover.out
+
+v goreturns -l -w *.go */*.go
+
+v go vet ./...

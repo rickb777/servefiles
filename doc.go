@@ -22,11 +22,7 @@
 
 /*
 Package servefiles provides a static asset handler for serving files such as images, stylesheets and
-javascript code.
-
-This version is deprecated: please use v3 for new use cases.
-
-This asset handler is an enhancement to the standard net/http ServeFiles, which is used internally.
+javascript code. This is an enhancement to the standard net/http ServeFiles, which is used internally.
 Care is taken to set headers such that the assets will be efficiently cached by browsers and proxies.
 
     assets := servefiles.NewAssetHandler("./assets/").WithMaxAge(time.Hour)
@@ -63,6 +59,8 @@ or weak tags are used for plain or gzipped files respectively (the reason is tha
 compressed with different levels of compression, a weak Etag indicates there is not a strict match for the
 file's content).
 
+For further information see RFC7232 https://tools.ietf.org/html/rfc7232.
+
 
 Cache Control
 
@@ -73,6 +71,8 @@ conditional requests are made. There is clearly a big benefit in page load times
 
 No in-memory caching is performed server-side. This is needed less due to far-future caching being
 supported, but might be added in future.
+
+For further information see RFC7234 https://tools.ietf.org/html/rfc7234.
 
 
 Path Stripping

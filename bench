@@ -7,4 +7,8 @@ vsn=$(git describe --tags --dirty)
 file=trend/$vsn-$(date '+%Y%m%d').txt
 echo Writing results to $file
 
-go test -bench . | tee $file
+export GO11MODULE=on
+
+uname -mors      | tee $file
+go version       | tee -a $file
+go test -bench . | tee -a $file

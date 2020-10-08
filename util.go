@@ -19,8 +19,8 @@ func (list commaSeparatedList) Contains(want string) bool {
 type code int
 
 const (
-	Directory          code = 0
-	Continue           code = 100
+	Directory code = 0
+	Continue  code = 100
 	//OK                 code = 200
 	//NotModified        code = 304
 	Forbidden          code = 403

@@ -34,8 +34,9 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/spf13/afero"
+
 	"github.com/rickb777/path"
+	"github.com/spf13/afero"
 )
 
 // This needs to track the same string in net/http (which is unlikely ever to change)
@@ -211,6 +212,24 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 	}
 
 	acceptEncoding := commaSeparatedList(req.Header.Get("Accept-Encoding"))
+	if acceptEncoding.Contains("br") {
+		brotli := resource + ".br"
+
+		fdbr := a.checkResource(brotli, header)
+
+		if fdbr.code == Continue {
+			ext := filepath.Ext(resource)
+			header.Set("Content-Type", mime.TypeByExtension(ext))
+			// the standard library sometimes overrides the content type via sniffing
+			header.Set("X-Content-Type-Options", "nosniff")
+			header.Set("Content-Encoding", "br")
+			header.Add("Vary", "Accept-Encoding")
+			// weak etag because the representation is not the original file but a compressed variant
+			header.Set("ETag", "W/"+calculateEtag(fdbr.fi))
+			return brotli, Continue
+		}
+	}
+
 	if acceptEncoding.Contains("gzip") {
 		gzipped := resource + ".gz"
 

@@ -9,13 +9,17 @@ DIR=$PWD
 DOT=$(dirname $0)
 cd $DOT
 TOP=$PWD
+PATH=$HOME/go/bin:$PATH
+
+export GO11MODULE=on
 
 #go env
+go mod download
 
 # install Goveralls if absent
 if ! type -p goveralls; then
-  echo go get github.com/mattn/goveralls
-  go get github.com/mattn/goveralls
+  echo go install github.com/mattn/goveralls
+  go install github.com/mattn/goveralls
 fi
 
 rm -rf reports
