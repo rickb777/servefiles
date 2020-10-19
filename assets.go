@@ -23,7 +23,6 @@
 package servefiles
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 	"mime"
@@ -97,7 +96,7 @@ func NewAssetHandlerFS(fs afero.Fs) *Assets {
 // The returned handler is a new copy of the original one.
 func (a Assets) StripOff(unwantedPrefixSegments int) *Assets {
 	if unwantedPrefixSegments < 0 {
-		panic(errors.New("Negative unwantedPrefixSegments"))
+		panic("Negative unwantedPrefixSegments")
 	}
 	a.UnwantedPrefixSegments = unwantedPrefixSegments
 	return &a
@@ -108,7 +107,7 @@ func (a Assets) StripOff(unwantedPrefixSegments int) *Assets {
 // The returned handler is a new copy of the original one.
 func (a Assets) WithMaxAge(maxAge time.Duration) *Assets {
 	if maxAge < 0 {
-		panic(errors.New("Negative maxAge"))
+		panic("Negative maxAge")
 	}
 	a.MaxAge = maxAge
 	return &a

@@ -25,6 +25,10 @@ User agents can cache responses. This http server enables easy support for two s
 
 Note that conditional requests (RFC7232) and MaxAge caching (RFC7234) can work together as required. Conditional requests still require network round trips, whereas caching removes all network round-trips until the entities reach their expiry time. 
 
+## Gin Adapter
+
+Sub-package gin_adapter provides integration hooks into the [Gin web framework](github.com/gin-gonic/gin). This makes it easy for Gin code to use this asset handler also: see the example in the sub-package for more info.
+
 ## v3
 
 Version 3 brings Go module support. Also, `brotli` encoding is supported alongside `gzip` encoding. Brotli now has widespread implementation in most browsers. You can compress your textual assets (including Javascript, CSS, HTML, SVG etc) using Brotli and/or Gzip as part of your build pipeline, uploading both the original and compressed files to your production server's asset directories. Brotli compression takes longer than Gzip but produces more compact files. Compression is, of course, optional.

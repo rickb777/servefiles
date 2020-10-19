@@ -24,7 +24,9 @@ if ! type -p goreturns; then
   v go install github.com/sqs/goreturns
 fi
 
-go test -v -covermode=count -coverprofile=cover.out .
+v go test -v ./...
+
+v go test -v -covermode=count -coverprofile=cover.out .
 go tool cover -func=cover.out
 [ -z "$COVERALLS_TOKEN" ] || goveralls -coverprofile=cover.out -service=travis-ci -repotoken $COVERALLS_TOKEN || echo 'Coult not push to coveralls'
 rm cover.out
