@@ -258,7 +258,11 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 	return fd.resource, fd.code
 }
 
-// ServeHTTP implements the http.Handler interface.
+// ServeHTTP implements the http.Handler interface. Note that it (a) handles
+// headers for compression, expiry etc, and then (b) calls the standard
+// http.ServeHTTP handler for each request. This ensures that it follows
+// all the standard logic paths implemented there, including conditional
+// requests and content negotiation.
 func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	resource, code := a.chooseResource(w.Header(), req)
 

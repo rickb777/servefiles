@@ -9,8 +9,14 @@ import (
 	"github.com/spf13/afero"
 )
 
+// GinAssets is merely an adapter for servefiles.Assets with the same API and with an
+// additional HandlerFunc method.
 type GinAssets servefiles.Assets
 
+// NewAssetHandler creates an Assets value. The parameter is the directory containing the asset files;
+// this can be absolute or relative to the directory in which the server process is started.
+//
+// This function cleans (i.e. normalises) the asset path.
 func NewAssetHandler(assetPath string) *GinAssets {
 	return (*GinAssets)(servefiles.NewAssetHandler(assetPath))
 }
