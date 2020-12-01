@@ -60,8 +60,8 @@ func (a *EchoAssets) HandlerFunc(path string) echo.HandlerFunc {
 	trim := 0
 	if strings.HasSuffix(path, "/*") {
 		trim = len(path) - 2
-	} else if path != "" {
-		panic("Path must end /* or be blank")
+	} else {
+		panic(path + ": path must end /* or be blank")
 	}
 
 	return func(c echo.Context) error {
@@ -70,4 +70,19 @@ func (a *EchoAssets) HandlerFunc(path string) echo.HandlerFunc {
 		(*servefiles.Assets)(a).ServeHTTP(c.Response(), c.Request())
 		return nil
 	}
+}
+
+// Register registers the asset handler with an Echo engine using the specified
+// path to handle GET and HEAD requests.
+//
+// The handler is registered using a catch-all path such as "/files/*". This
+// pattern will be stripped off the leading part of the URL path seem by the
+// asset handler when determining the file to be served.
+func (a *EchoAssets) Register(e *echo.Echo, path string) {
+	if !strings.HasSuffix(path, "/*") {
+		panic(path + ": path must end /*")
+	}
+	h := a.HandlerFunc(path)
+	e.GET(path, h)
+	e.HEAD(path, h)
 }

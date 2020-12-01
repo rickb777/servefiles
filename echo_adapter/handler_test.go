@@ -27,7 +27,12 @@ func ExampleHandlerFunc() {
 	// RFC7234 https://tools.ietf.org/html/rfc7234#section-5.2.2.8)
 	maxAge := time.Hour
 
+	// define the URL pattern that will be routed to the asset handler
+	// (optional)
 	const path = "/files/*"
+
+	router := echo.New()
+	// ... add other routes / handlers / middleware as required
 
 	h := echo_adapter.NewAssetHandler(localPath).
 		WithMaxAge(maxAge).
@@ -35,9 +40,8 @@ func ExampleHandlerFunc() {
 		StripOff(1).
 		HandlerFunc(path)
 
-	router := echo.New()
-	// ... add other routes / handlers / middleware as required
 	router.GET(path, h)
+	router.HEAD(path, h)
 
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
@@ -55,13 +59,11 @@ func TestHandlerFunc(t *testing.T) {
 	h := echo_adapter.NewAssetHandlerFS(fs).
 		WithMaxAge(maxAge).
 		WithNotFound(http.NotFoundHandler()). // supply your own
-		StripOff(1).
-		HandlerFunc(assetPath)
+		StripOff(1)
 
 	router := echo.New()
 	// ... add other routes / handlers / middleware as required
-	router.GET(assetPath, h)
-	router.HEAD(assetPath, h)
+	h.Register(router, assetPath)
 
 	r, _ := http.NewRequest(http.MethodGet, "http://localhost/files/101/foo/bar/x.txt", nil)
 	w := httptest.NewRecorder()
