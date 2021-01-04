@@ -595,6 +595,10 @@ func (fs fs403) Chmod(name string, mode os.FileMode) error {
 	return fs.err
 }
 
+func (fs fs403) Chown(name string, uid, gid int) error {
+	return fs.err
+}
+
 func (fs fs403) Chtimes(name string, atime time.Time, mtime time.Time) error {
 	return fs.err
 }
