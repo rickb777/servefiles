@@ -291,6 +291,9 @@ func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// the only value that matters.
 	Debugf("Assets ServeHTTP (ok %d) %s %s (was %s) R:%+v W:%+v\n", code, req.Method, req.URL.Path, original, req.Header, w.Header())
 	a.server.ServeHTTP(w, req)
+
+	// leave the path as we found it, in case middleware depends on the original value
+	req.URL.Path = original
 }
 
 func cleanPathAndAppendSlash(s string) string {

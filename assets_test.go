@@ -55,9 +55,9 @@ func TestChooseResourceSimpleNoGzip(t *testing.T) {
 		maxAge                  time.Duration
 		url, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=1"},
-		{0, 3671, "http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=3671"},
-		{3, 3671, "http://localhost:8001/x/y/z/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=3671"},
+		{0, 1, "/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=1"},
+		{0, 3671, "/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=3671"},
+		{3, 3671, "/x/y/z/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=3671"},
 	}
 
 	for i, test := range cases {
@@ -86,9 +86,9 @@ func TestChooseResourceSimpleNonExistent(t *testing.T) {
 		maxAge time.Duration
 		url    string
 	}{
-		{0, time.Second, "http://localhost:8001/img/nonexisting.png"},
-		{1, time.Second, "http://localhost:8001/a/img/nonexisting.png"},
-		{2, time.Second, "http://localhost:8001/a/b/img/nonexisting.png"},
+		{0, time.Second, "/img/nonexisting.png"},
+		{1, time.Second, "/a/img/nonexisting.png"},
+		{2, time.Second, "/a/b/img/nonexisting.png"},
 	}
 
 	for i, test := range cases {
@@ -114,10 +114,10 @@ func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
-		{2, 1, "http://localhost:8001/a/b/css/style1.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
-		{0, 1, "http://localhost:8001/js/script1.js", "application/javascript", "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
-		{2, 1, "http://localhost:8001/a/b/js/script1.js", "application/javascript", "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
+		{0, 1, "/css/style1.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
+		{2, 1, "/a/b/css/style1.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
+		{0, 1, "/js/script1.js", "application/javascript", "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
+		{2, 1, "/a/b/js/script1.js", "application/javascript", "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
 	}
 
 	for _, test := range cases {
@@ -151,10 +151,10 @@ func TestServeHTTP200WithBrAndBrWithAcceptHeader(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
-		{2, 1, "http://localhost:8001/a/b/css/style1.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
-		{0, 1, "http://localhost:8001/js/script1.js", "application/javascript", "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
-		{2, 1, "http://localhost:8001/a/b/js/script1.js", "application/javascript", "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
+		{0, 1, "/css/style1.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
+		{2, 1, "/a/b/css/style1.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
+		{0, 1, "/js/script1.js", "application/javascript", "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
+		{2, 1, "/a/b/js/script1.js", "application/javascript", "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
 	}
 
 	for _, test := range cases {
@@ -188,10 +188,10 @@ func TestServeHTTP200WithGzipButNoAcceptHeader(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/css/style1.css", "text/css; charset=utf-8", "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=1"},
-		{2, 2, "http://localhost:8001/a/b/css/style1.css", "text/css; charset=utf-8", "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=2"},
-		{0, 3, "http://localhost:8001/js/script1.js", "application/javascript", "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=3"},
-		{2, 4, "http://localhost:8001/a/b/js/script1.js", "application/javascript", "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=4"},
+		{0, 1, "/css/style1.css", "text/css; charset=utf-8", "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=1"},
+		{2, 2, "/a/b/css/style1.css", "text/css; charset=utf-8", "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=2"},
+		{0, 3, "/js/script1.js", "application/javascript", "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=3"},
+		{2, 4, "/a/b/js/script1.js", "application/javascript", "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=4"},
 	}
 
 	for _, test := range cases {
@@ -224,18 +224,18 @@ func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "http://localhost:8001/css/style2.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
-		{0, 1, "http://localhost:8001/css/style2.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
-		{2, 2, "http://localhost:8001/a/b/css/style2.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
-		{2, 2, "http://localhost:8001/a/b/css/style2.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
-		{0, 3, "http://localhost:8001/js/script2.js", "application/javascript", "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
-		{0, 3, "http://localhost:8001/js/script2.js", "application/javascript", "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
-		{2, 4, "http://localhost:8001/a/b/js/script2.js", "application/javascript", "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
-		{2, 4, "http://localhost:8001/a/b/js/script2.js", "application/javascript", "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
-		{0, 5, "http://localhost:8001/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
-		{0, 5, "http://localhost:8001/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
-		{2, 6, "http://localhost:8001/a/b/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=6"},
-		{2, 6, "http://localhost:8001/a/b/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=6"},
+		{0, 1, "/css/style2.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
+		{0, 1, "/css/style2.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
+		{2, 2, "/a/b/css/style2.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
+		{2, 2, "/a/b/css/style2.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
+		{0, 3, "/js/script2.js", "application/javascript", "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
+		{0, 3, "/js/script2.js", "application/javascript", "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
+		{2, 4, "/a/b/js/script2.js", "application/javascript", "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
+		{2, 4, "/a/b/js/script2.js", "application/javascript", "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
+		{0, 5, "/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
+		{0, 5, "/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
+		{2, 6, "/a/b/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=6"},
+		{2, 6, "/a/b/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=6"},
 	}
 
 	for _, test := range cases {
@@ -282,7 +282,7 @@ func Test404Handler(t *testing.T) {
 	}
 
 	for i, test := range cases {
-		url := mustUrl("http://localhost:8001" + test.path)
+		url := mustUrl("" + test.path)
 		request := &http.Request{Method: "GET", URL: url}
 		a := NewAssetHandler("./assets/").WithNotFound(test.notFound)
 		isEqual(t, a.NotFound, test.notFound, i)
@@ -301,12 +301,12 @@ func Test403Handling(t *testing.T) {
 		path   string
 		header http.Header
 	}{
-		{"http://localhost:8001/css/style1.css", newHeader()},
-		{"http://localhost:8001/css/style1.css", newHeader("Accept-Encoding", "gzip")},
+		{"/css/style1.css", newHeader()},
+		{"/css/style1.css", newHeader("Accept-Encoding", "gzip")},
 	}
 
 	for i, test := range cases {
-		url := mustUrl("http://localhost:8001" + test.path)
+		url := mustUrl("" + test.path)
 		request := &http.Request{Method: "GET", URL: url, Header: test.header}
 		a := NewAssetHandlerFS(&fs403{os.ErrPermission})
 		w := httptest.NewRecorder()
@@ -324,12 +324,12 @@ func Test503Handling(t *testing.T) {
 		path   string
 		header http.Header
 	}{
-		{"http://localhost:8001/css/style1.css", newHeader()},
-		{"http://localhost:8001/css/style1.css", newHeader("Accept-Encoding", "gzip")},
+		{"/css/style1.css", newHeader()},
+		{"/css/style1.css", newHeader("Accept-Encoding", "gzip")},
 	}
 
 	for i, test := range cases {
-		url := mustUrl("http://localhost:8001" + test.path)
+		url := mustUrl("" + test.path)
 		request := &http.Request{Method: "GET", URL: url, Header: test.header}
 		a := NewAssetHandlerFS(&fs403{os.ErrInvalid})
 		w := httptest.NewRecorder()
@@ -350,21 +350,21 @@ func TestServeHTTP304(t *testing.T) {
 		url, path, encoding string
 		notFound            http.Handler
 	}{
-		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.gz", "gzip", nil},
-		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.br", "br", nil},
-		{"http://localhost:8001/css/style2.css", "assets/css/style2.css", "xx", nil},
-		{"http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "xx", nil},
-		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.gz", "gzip", nil},
-		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.br", "br", nil},
-		{"http://localhost:8001/js/script2.js", "assets/js/script2.js", "xx", nil},
+		{"/css/style1.css", "assets/css/style1.css.gz", "gzip", nil},
+		{"/css/style1.css", "assets/css/style1.css.br", "br", nil},
+		{"/css/style2.css", "assets/css/style2.css", "xx", nil},
+		{"/img/sort_asc.png", "assets/img/sort_asc.png", "xx", nil},
+		{"/js/script1.js", "assets/js/script1.js.gz", "gzip", nil},
+		{"/js/script1.js", "assets/js/script1.js.br", "br", nil},
+		{"/js/script2.js", "assets/js/script2.js", "xx", nil},
 
-		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.gz", "gzip", &h404{}},
-		{"http://localhost:8001/css/style1.css", "assets/css/style1.css.br", "br", &h404{}},
-		{"http://localhost:8001/css/style2.css", "assets/css/style2.css", "xx", &h404{}},
-		{"http://localhost:8001/img/sort_asc.png", "assets/img/sort_asc.png", "xx", &h404{}},
-		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.gz", "gzip", &h404{}},
-		{"http://localhost:8001/js/script1.js", "assets/js/script1.js.br", "br", &h404{}},
-		{"http://localhost:8001/js/script2.js", "assets/js/script2.js", "xx", &h404{}},
+		{"/css/style1.css", "assets/css/style1.css.gz", "gzip", &h404{}},
+		{"/css/style1.css", "assets/css/style1.css.br", "br", &h404{}},
+		{"/css/style2.css", "assets/css/style2.css", "xx", &h404{}},
+		{"/img/sort_asc.png", "assets/img/sort_asc.png", "xx", &h404{}},
+		{"/js/script1.js", "assets/js/script1.js.gz", "gzip", &h404{}},
+		{"/js/script1.js", "assets/js/script1.js.br", "br", &h404{}},
+		{"/js/script2.js", "assets/js/script2.js", "xx", &h404{}},
 	}
 
 	// net/http serveFiles handles conditional requests according to RFC723x specs.
@@ -381,6 +381,7 @@ func TestServeHTTP304(t *testing.T) {
 		a.ServeHTTP(w, request)
 
 		isEqual(t, w.Code, 304, i)
+		isEqual(t, request.URL.Path, test.url, i)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
 		isGte(t, len(headers), 1, i)
@@ -468,7 +469,7 @@ func Benchmark(t *testing.B) {
 				b.StopTimer()
 
 				for i := 0; i < b.N; i++ {
-					url := mustUrl("http://localhost:8001/" + test.url)
+					url := mustUrl("/" + test.url)
 					request := &http.Request{Method: "GET", URL: url, Header: header}
 					w := httptest.NewRecorder()
 
