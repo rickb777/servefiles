@@ -24,6 +24,7 @@ package servefiles
 
 import (
 	"fmt"
+	"io/fs"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -56,7 +57,8 @@ type Assets struct {
 	// http.NotFound is used.
 	NotFound http.Handler
 
-	fs               afero.Fs
+	// the local filesystem (remember that all paths are relative to its root)
+	fs               fs.FS
 	server           http.Handler
 	expiryElasticity time.Duration
 	timestamp        int64
@@ -74,17 +76,27 @@ var _ http.Handler = &Assets{}
 //
 // This function cleans (i.e. normalises) the asset path.
 func NewAssetHandler(assetPath string) *Assets {
-	cleanAssetPath := cleanPathAndAppendSlash(assetPath)
+	cleanAssetPath := path.Clean(assetPath)
 	Debugf("NewAssetHandler %s\n", cleanAssetPath)
-	fs := afero.NewBasePathFs(afero.NewOsFs(), cleanAssetPath)
-	return NewAssetHandlerFS(fs)
+	filesystem := os.DirFS(cleanAssetPath).(fs.StatFS)
+	return NewAssetHandlerIoFS(filesystem)
 }
 
 // NewAssetHandlerFS creates an Assets value for a given filesystem.
 func NewAssetHandlerFS(fs afero.Fs) *Assets {
 	return &Assets{
-		fs:     fs,
+		fs:     afero.NewIOFS(fs),
 		server: http.FileServer(afero.NewHttpFs(fs)),
+		lock:   &sync.Mutex{},
+	}
+}
+
+// NewAssetHandlerIoFS creates an Assets value for a given filesystem.
+// Implementations include os.DirFS.
+func NewAssetHandlerIoFS(fs fs.FS) *Assets {
+	return &Assets{
+		fs:     fs,
+		server: http.FileServer(http.FS(fs)),
 		lock:   &sync.Mutex{},
 	}
 }
@@ -172,7 +184,7 @@ func handleSaturatedServer(header http.Header, resource string, err error) fileD
 }
 
 func (a *Assets) checkResource(resource string, header http.Header) fileData {
-	d, err := a.fs.Stat(resource)
+	d, err := fs.Stat(a.fs, removeLeadingSlash(resource))
 	if err != nil {
 		if os.IsNotExist(err) {
 			// gzipped does not exist; original might but this gets checked later
@@ -196,6 +208,13 @@ func (a *Assets) checkResource(resource string, header http.Header) fileData {
 
 	Debugf("Assets checkResource 100 %s\n", resource)
 	return fileData{resource, Continue, d}
+}
+
+func removeLeadingSlash(name string) string {
+	if len(name) > 0 && name[0] == '/' {
+		name = name[1:]
+	}
+	return name
 }
 
 func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, code) {
@@ -294,11 +313,6 @@ func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// leave the path as we found it, in case middleware depends on the original value
 	req.URL.Path = original
-}
-
-func cleanPathAndAppendSlash(s string) string {
-	clean := path.Clean(s)
-	return string(append([]byte(clean), '/'))
 }
 
 //-------------------------------------------------------------------------------------------------

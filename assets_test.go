@@ -46,7 +46,41 @@ func mustChdir(dir string) {
 }
 
 func init() {
-	mustChdir("test")
+	mustChdir("testdata")
+}
+
+const (
+	cssMimeType        = "text/css; charset=utf-8"
+	javascriptMimeType = "text/javascript; charset=utf-8"
+)
+
+func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
+	cases := []struct {
+		n                       int
+		maxAge                  time.Duration
+		url, path, cacheControl string
+	}{
+		{0, 1, "/", "assets/index.html", "public, maxAge=1"},
+	}
+
+	for i, test := range cases {
+		etag := etagFor(test.path)
+		url := mustUrl(test.url)
+		request := &http.Request{Method: "GET", URL: url}
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
+		w := httptest.NewRecorder()
+
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, 301, i)
+		//isEqual(t, message, "", test.path)
+		isEqual(t, len(w.Header()["Expires"]), 1, i)
+		isGte(t, len(w.Header()["Expires"][0]), 25, i)
+		//fmt.Println(headers["Expires"])
+		isEqual(t, w.Header()["Cache-Control"], []string{test.cacheControl}, i)
+		isEqual(t, w.Header()["Etag"], []string{etag}, i)
+		isEqual(t, w.Body.Len(), 0, i)
+	}
 }
 
 func TestChooseResourceSimpleNoGzip(t *testing.T) {
@@ -114,10 +148,10 @@ func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "/css/style1.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
-		{2, 1, "/a/b/css/style1.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
-		{0, 1, "/js/script1.js", "application/javascript", "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
-		{2, 1, "/a/b/js/script1.js", "application/javascript", "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
+		{0, 1, "/css/style1.css", cssMimeType, "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
+		{2, 1, "/a/b/css/style1.css", cssMimeType, "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
+		{0, 1, "/js/script1.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
+		{2, 1, "/a/b/js/script1.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
 	}
 
 	for _, test := range cases {
@@ -151,10 +185,10 @@ func TestServeHTTP200WithBrAndBrWithAcceptHeader(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "/css/style1.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
-		{2, 1, "/a/b/css/style1.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
-		{0, 1, "/js/script1.js", "application/javascript", "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
-		{2, 1, "/a/b/js/script1.js", "application/javascript", "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
+		{0, 1, "/css/style1.css", cssMimeType, "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
+		{2, 1, "/a/b/css/style1.css", cssMimeType, "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
+		{0, 1, "/js/script1.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
+		{2, 1, "/a/b/js/script1.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
 	}
 
 	for _, test := range cases {
@@ -188,10 +222,10 @@ func TestServeHTTP200WithGzipButNoAcceptHeader(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "/css/style1.css", "text/css; charset=utf-8", "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=1"},
-		{2, 2, "/a/b/css/style1.css", "text/css; charset=utf-8", "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=2"},
-		{0, 3, "/js/script1.js", "application/javascript", "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=3"},
-		{2, 4, "/a/b/js/script1.js", "application/javascript", "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=4"},
+		{0, 1, "/css/style1.css", cssMimeType, "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=1"},
+		{2, 2, "/a/b/css/style1.css", cssMimeType, "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=2"},
+		{0, 3, "/js/script1.js", javascriptMimeType, "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=3"},
+		{2, 4, "/a/b/js/script1.js", javascriptMimeType, "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=4"},
 	}
 
 	for _, test := range cases {
@@ -224,14 +258,14 @@ func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "/css/style2.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
-		{0, 1, "/css/style2.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
-		{2, 2, "/a/b/css/style2.css", "text/css; charset=utf-8", "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
-		{2, 2, "/a/b/css/style2.css", "text/css; charset=utf-8", "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
-		{0, 3, "/js/script2.js", "application/javascript", "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
-		{0, 3, "/js/script2.js", "application/javascript", "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
-		{2, 4, "/a/b/js/script2.js", "application/javascript", "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
-		{2, 4, "/a/b/js/script2.js", "application/javascript", "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
+		{0, 1, "/css/style2.css", cssMimeType, "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
+		{0, 1, "/css/style2.css", cssMimeType, "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
+		{2, 2, "/a/b/css/style2.css", cssMimeType, "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
+		{2, 2, "/a/b/css/style2.css", cssMimeType, "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
+		{0, 3, "/js/script2.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
+		{0, 3, "/js/script2.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
+		{2, 4, "/a/b/js/script2.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
+		{2, 4, "/a/b/js/script2.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
 		{0, 5, "/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
 		{0, 5, "/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
 		{2, 6, "/a/b/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=6"},
