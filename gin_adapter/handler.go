@@ -27,8 +27,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/blib/servefiles/v3"
 	"github.com/gin-gonic/gin"
-	"github.com/rickb777/servefiles/v3"
 	"github.com/spf13/afero"
 )
 
