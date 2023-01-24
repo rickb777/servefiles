@@ -274,7 +274,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 		header.Set("ETag", calculateEtag(fd.fi))
 	}
 
-	return fd.resource, fd.code
+	return strings.TrimSuffix(fd.resource, indexPage), fd.code
 }
 
 // ServeHTTP implements the http.Handler interface. Note that it (a) handles

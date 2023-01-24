@@ -30,12 +30,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rickb777/servefiles/v3/afero2"
+	"github.com/blib/servefiles/v3/afero2"
 
+	"github.com/blib/servefiles/v3/echo_adapter"
+	"github.com/blib/servefiles/v3/testdata"
 	"github.com/labstack/echo/v4"
 	. "github.com/onsi/gomega"
-	"github.com/rickb777/servefiles/v3/echo_adapter"
-	"github.com/rickb777/servefiles/v3/testdata"
 	"github.com/spf13/afero"
 )
 

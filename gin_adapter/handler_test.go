@@ -30,12 +30,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rickb777/servefiles/v3/afero2"
+	"github.com/blib/servefiles/v3/afero2"
 
+	"github.com/blib/servefiles/v3/gin_adapter"
+	"github.com/blib/servefiles/v3/testdata"
 	"github.com/gin-gonic/gin"
 	. "github.com/onsi/gomega"
-	"github.com/rickb777/servefiles/v3/gin_adapter"
-	"github.com/rickb777/servefiles/v3/testdata"
 	"github.com/spf13/afero"
 )
 

@@ -1,4 +1,4 @@
-module github.com/rickb777/servefiles/v3
+module github.com/blib/servefiles/v3
 
 go 1.17
 
