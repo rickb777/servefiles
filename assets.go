@@ -274,12 +274,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 		header.Set("ETag", calculateEtag(fd.fi))
 	}
 
-	// remove index.html to avoid redirect to / by standard library
-	if strings.HasSuffix(fd.resource, "/"+indexPage) {
-		return fd.resource[0 : len(fd.resource)-len(indexPage)], fd.code
-	}
-
-	return fd.resource, fd.code
+	return strings.TrimSuffix(fd.resource, indexPage), fd.code
 }
 
 // ServeHTTP implements the http.Handler interface. Note that it (a) handles
