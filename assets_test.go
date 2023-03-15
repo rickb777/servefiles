@@ -422,16 +422,14 @@ func TestServeHTTP304(t *testing.T) {
 		isEqual(t, headers["Cache-Control"], emptyStrings, i)
 		isEqual(t, headers["Content-Type"], emptyStrings, i)
 		isEqual(t, headers["Content-Length"], emptyStrings, i)
+		isEqual(t, headers["Content-Encoding"], emptyStrings, i)
 		if strings.HasSuffix(test.path, ".gz") {
-			isEqual(t, headers["Content-Encoding"], []string{"gzip"}, i)
 			isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, i)
 			isEqual(t, headers["Etag"], []string{"W/" + etag}, i)
 		} else if strings.HasSuffix(test.path, ".br") {
-			isEqual(t, headers["Content-Encoding"], []string{"br"}, i)
 			isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, i)
 			isEqual(t, headers["Etag"], []string{"W/" + etag}, i)
 		} else {
-			isEqual(t, headers["Content-Encoding"], emptyStrings, i)
 			isEqual(t, headers["Vary"], emptyStrings, i)
 			isEqual(t, headers["Etag"], []string{etag}, i)
 		}
