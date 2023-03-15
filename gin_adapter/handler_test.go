@@ -55,7 +55,7 @@ func ExampleHandlerFunc() {
 
 	// how long we allow user agents to cache assets
 	// (this is in addition to conditional requests, see
-	// RFC7234 https://tools.ietf.org/html/rfc7234#section-5.2.2.8)
+	// RFC9111 https://www.rfc-editor.org/rfc/rfc9111#section-5.2.2.1)
 	maxAge := time.Hour
 
 	// define the URL pattern that will be routed to the asset handler

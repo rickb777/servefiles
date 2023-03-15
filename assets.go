@@ -226,7 +226,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 
 	if a.MaxAge > 0 {
 		header.Set("Expires", a.expires())
-		header.Set("Cache-Control", fmt.Sprintf("public, maxAge=%d", a.MaxAge/time.Second))
+		header.Set("Cache-Control", fmt.Sprintf("public, max-age=%d", a.MaxAge/time.Second))
 	}
 
 	acceptEncoding := commaSeparatedList(req.Header.Get("Accept-Encoding"))

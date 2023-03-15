@@ -60,7 +60,7 @@ func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 		maxAge                  time.Duration
 		url, path, cacheControl string
 	}{
-		{0, 1, "/", "assets/index.html", "public, maxAge=1"},
+		{0, 1, "/", "assets/index.html", "public, max-age=1"},
 	}
 
 	for i, test := range cases {
@@ -89,9 +89,9 @@ func TestChooseResourceSimpleNoGzip(t *testing.T) {
 		maxAge                  time.Duration
 		url, path, cacheControl string
 	}{
-		{0, 1, "/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=1"},
-		{0, 3671, "/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=3671"},
-		{3, 3671, "/x/y/z/img/sort_asc.png", "assets/img/sort_asc.png", "public, maxAge=3671"},
+		{0, 1, "/img/sort_asc.png", "assets/img/sort_asc.png", "public, max-age=1"},
+		{0, 3671, "/img/sort_asc.png", "assets/img/sort_asc.png", "public, max-age=3671"},
+		{3, 3671, "/x/y/z/img/sort_asc.png", "assets/img/sort_asc.png", "public, max-age=3671"},
 	}
 
 	for i, test := range cases {
@@ -137,7 +137,7 @@ func TestChooseResourceSimpleNonExistent(t *testing.T) {
 		//t.Logf("header %v", w.Header())
 		isGte(t, len(w.Header()), 4, i)
 		isEqual(t, w.Header().Get("Content-Type"), "text/plain; charset=utf-8", i)
-		isEqual(t, w.Header().Get("Cache-Control"), "public, maxAge=1", i)
+		isEqual(t, w.Header().Get("Cache-Control"), "public, max-age=1", i)
 		isGte(t, len(w.Header().Get("Expires")), 25, i)
 	}
 }
@@ -148,10 +148,10 @@ func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "/css/style1.css", cssMimeType, "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
-		{2, 1, "/a/b/css/style1.css", cssMimeType, "xx, gzip, zzz", "assets/css/style1.css.gz", "public, maxAge=1"},
-		{0, 1, "/js/script1.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
-		{2, 1, "/a/b/js/script1.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script1.js.gz", "public, maxAge=1"},
+		{0, 1, "/css/style1.css", cssMimeType, "xx, gzip, zzz", "assets/css/style1.css.gz", "public, max-age=1"},
+		{2, 1, "/a/b/css/style1.css", cssMimeType, "xx, gzip, zzz", "assets/css/style1.css.gz", "public, max-age=1"},
+		{0, 1, "/js/script1.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script1.js.gz", "public, max-age=1"},
+		{2, 1, "/a/b/js/script1.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script1.js.gz", "public, max-age=1"},
 	}
 
 	for _, test := range cases {
@@ -185,10 +185,10 @@ func TestServeHTTP200WithBrAndBrWithAcceptHeader(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "/css/style1.css", cssMimeType, "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
-		{2, 1, "/a/b/css/style1.css", cssMimeType, "br, gzip, zzz", "assets/css/style1.css.br", "public, maxAge=1"},
-		{0, 1, "/js/script1.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
-		{2, 1, "/a/b/js/script1.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script1.js.br", "public, maxAge=1"},
+		{0, 1, "/css/style1.css", cssMimeType, "br, gzip, zzz", "assets/css/style1.css.br", "public, max-age=1"},
+		{2, 1, "/a/b/css/style1.css", cssMimeType, "br, gzip, zzz", "assets/css/style1.css.br", "public, max-age=1"},
+		{0, 1, "/js/script1.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script1.js.br", "public, max-age=1"},
+		{2, 1, "/a/b/js/script1.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script1.js.br", "public, max-age=1"},
 	}
 
 	for _, test := range cases {
@@ -222,10 +222,10 @@ func TestServeHTTP200WithGzipButNoAcceptHeader(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "/css/style1.css", cssMimeType, "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=1"},
-		{2, 2, "/a/b/css/style1.css", cssMimeType, "xx, yy, zzz", "assets/css/style1.css", "public, maxAge=2"},
-		{0, 3, "/js/script1.js", javascriptMimeType, "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=3"},
-		{2, 4, "/a/b/js/script1.js", javascriptMimeType, "xx, yy, zzz", "assets/js/script1.js", "public, maxAge=4"},
+		{0, 1, "/css/style1.css", cssMimeType, "xx, yy, zzz", "assets/css/style1.css", "public, max-age=1"},
+		{2, 2, "/a/b/css/style1.css", cssMimeType, "xx, yy, zzz", "assets/css/style1.css", "public, max-age=2"},
+		{0, 3, "/js/script1.js", javascriptMimeType, "xx, yy, zzz", "assets/js/script1.js", "public, max-age=3"},
+		{2, 4, "/a/b/js/script1.js", javascriptMimeType, "xx, yy, zzz", "assets/js/script1.js", "public, max-age=4"},
 	}
 
 	for _, test := range cases {
@@ -258,18 +258,18 @@ func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 		maxAge                                  time.Duration
 		url, mime, encoding, path, cacheControl string
 	}{
-		{0, 1, "/css/style2.css", cssMimeType, "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
-		{0, 1, "/css/style2.css", cssMimeType, "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=1"},
-		{2, 2, "/a/b/css/style2.css", cssMimeType, "xx, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
-		{2, 2, "/a/b/css/style2.css", cssMimeType, "br, gzip, zzz", "assets/css/style2.css", "public, maxAge=2"},
-		{0, 3, "/js/script2.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
-		{0, 3, "/js/script2.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=3"},
-		{2, 4, "/a/b/js/script2.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
-		{2, 4, "/a/b/js/script2.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script2.js", "public, maxAge=4"},
-		{0, 5, "/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
-		{0, 5, "/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=5"},
-		{2, 6, "/a/b/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=6"},
-		{2, 6, "/a/b/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, maxAge=6"},
+		{0, 1, "/css/style2.css", cssMimeType, "xx, gzip, zzz", "assets/css/style2.css", "public, max-age=1"},
+		{0, 1, "/css/style2.css", cssMimeType, "br, gzip, zzz", "assets/css/style2.css", "public, max-age=1"},
+		{2, 2, "/a/b/css/style2.css", cssMimeType, "xx, gzip, zzz", "assets/css/style2.css", "public, max-age=2"},
+		{2, 2, "/a/b/css/style2.css", cssMimeType, "br, gzip, zzz", "assets/css/style2.css", "public, max-age=2"},
+		{0, 3, "/js/script2.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script2.js", "public, max-age=3"},
+		{0, 3, "/js/script2.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script2.js", "public, max-age=3"},
+		{2, 4, "/a/b/js/script2.js", javascriptMimeType, "xx, gzip, zzz", "assets/js/script2.js", "public, max-age=4"},
+		{2, 4, "/a/b/js/script2.js", javascriptMimeType, "br, gzip, zzz", "assets/js/script2.js", "public, max-age=4"},
+		{0, 5, "/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, max-age=5"},
+		{0, 5, "/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, max-age=5"},
+		{2, 6, "/a/b/img/sort_asc.png", "image/png", "xx, gzip, zzz", "assets/img/sort_asc.png", "public, max-age=6"},
+		{2, 6, "/a/b/img/sort_asc.png", "image/png", "br, gzip, zzz", "assets/img/sort_asc.png", "public, max-age=6"},
 	}
 
 	for _, test := range cases {
@@ -401,7 +401,7 @@ func TestServeHTTP304(t *testing.T) {
 		{"/js/script2.js", "assets/js/script2.js", "xx", &h404{}},
 	}
 
-	// net/http serveFiles handles conditional requests according to RFC723x specs.
+	// net/http serveFiles handles conditional requests according to RFC9110 specs.
 	// So we only need to check that a conditional request is correctly wired in.
 
 	for i, test := range cases {

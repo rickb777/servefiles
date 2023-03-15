@@ -25,12 +25,11 @@ Package servefiles provides a static asset handler for serving files such as ima
 javascript code. This is an enhancement to the standard net/http ServeFiles, which is used internally.
 Care is taken to set headers such that the assets will be efficiently cached by browsers and proxies.
 
-    assets := servefiles.NewAssetHandler("./assets/").WithMaxAge(time.Hour)
+	assets := servefiles.NewAssetHandler("./assets/").WithMaxAge(time.Hour)
 
 Assets is an http.Handler and can be used alongside your other handlers.
 
-
-Gzipped Content
+# Gzipped Content
 
 The Assets handler serves gzipped content when the browser indicates it can accept it. But it does not
 gzip anything on-the-fly. Nor does it create any gzipped files for you.
@@ -47,8 +46,7 @@ You should not attempt to gzip already-compressed files, such as PNG, JPEG, SVGZ
 Very small files (e.g. less than 1kb) gain little from compression because they may be small enough to fit
 within a single TCP packet, so don't bother with them. (They might even grow in size when gzipped.)
 
-
-Conditional Request Support
+# Conditional Request Support
 
 The Assets handler sets 'Etag' headers for the responses of the assets it finds. Modern browsers need this: they
 are then able to send conditional requests that very often shrink responses to a simple 304 Not Modified. This
@@ -59,10 +57,9 @@ or weak tags are used for plain or gzipped files respectively (the reason is tha
 compressed with different levels of compression, a weak Etag indicates there is not a strict match for the
 file's content).
 
-For further information see RFC7232 https://tools.ietf.org/html/rfc7232.
+For further information see RFC9110 https://tools.ietf.org/html/rfc9110.
 
-
-Cache Control
+# Cache Control
 
 To go even further, the 'far-future' technique can and should often be used. Set a long expiry time, e.g.
 ten years via `time.Hour * 24 * 365 * 10`.
@@ -72,21 +69,20 @@ conditional requests are made. There is clearly a big benefit in page load times
 No in-memory caching is performed server-side. This is needed less due to far-future caching being
 supported, but might be added in future.
 
-For further information see RFC7234 https://tools.ietf.org/html/rfc7234.
+For further information see RFC9111 https://tools.ietf.org/html/rfc9111.
 
-
-Path Stripping
+# Path Stripping
 
 The Assets handler can optionally strip some path segments from the URL before selecting the asset to be served.
 
 This means, for example, that the URL
 
-    http://example.com/e3b1cf/css/style1.css
+	http://example.com/e3b1cf/css/style1.css
 
 can map to the asset files
 
-    ./assets/css/style1.css
-    ./assets/css/style1.css.gz
+	./assets/css/style1.css
+	./assets/css/style1.css.gz
 
 without the /e3b1cf/ segment. The benefit of this is that you can use a unique number or hash in that segment (chosen
 for example each time your server starts). Each time that number changes, browsers will see the asset files as
@@ -94,12 +90,11 @@ being new, and they will later drop old versions from their cache regardless of 
 
 So you get the far-future lifespan combined with being able to push out changed assets as often as you need to.
 
-
-Example Usage
+# Example Usage
 
 To serve files with a ten-year expiry, this creates a suitably-configured handler:
 
-    assets := servefiles.NewAssetHandler("./assets/").StripOff(1).WithMaxAge(10 * 365 * 24 * time.Hour)
+	assets := servefiles.NewAssetHandler("./assets/").StripOff(1).WithMaxAge(10 * 365 * 24 * time.Hour)
 
 The first parameter names the local directory that holds the asset files. It can be absolute or relative to
 the directory in which the server process is started.

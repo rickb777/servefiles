@@ -21,13 +21,17 @@ Please see the [GoDoc](https://godoc.org/github.com/rickb777/servefiles) for mor
 User agents can cache responses. This http server enables easy support for two such mechanisms:
 
  * Conditional requests (using `etags`) allow the response to be sent only when it has changed
- * MaxAge response headers allow the user agent to cache entities until some expiry time.
+ * Cache-Control `max-age` response headers allow the user agent to cache entities until some expiry time.
 
-Note that conditional requests (RFC7232) and MaxAge caching (RFC7234) can work together as required. Conditional requests still require network round trips, whereas caching removes all network round-trips until the entities reach their expiry time. 
+Note that conditional requests [RFC9110](https://www.rfc-editor.org/rfc/rfc9110#name-conditional-requests) and `max-age` caching ([RFC9111](https://www.rfc-editor.org/rfc/rfc9111#section-5.2.2.1)) can work together as required. Conditional requests still require network round trips, whereas caching removes all network round-trips until the entities reach their expiry time. 
+
+## Echo Adapter
+
+Sub-package echo_adapter provides integration hooks into the [Echo web framework](https://echo.labstack.com/). This makes it easy for Echo code to use this asset handler also: see the example in the sub-package for more info.
 
 ## Gin Adapter
 
-Sub-package gin_adapter provides integration hooks into the [Gin web framework](github.com/gin-gonic/gin). This makes it easy for Gin code to use this asset handler also: see the example in the sub-package for more info.
+Sub-package gin_adapter provides integration hooks into the [Gin web framework](https://github.com/gin-gonic/gin). This makes it easy for Gin code to use this asset handler also: see the example in the sub-package for more info.
 
 ## v3
 
