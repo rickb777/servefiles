@@ -25,5 +25,6 @@ package testdata
 import "embed"
 
 // TestDataFS provides an embedded filesystem used for testing only.
+//
 //go:embed assets
 var TestDataFS embed.FS
