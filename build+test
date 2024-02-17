@@ -16,21 +16,16 @@ function v
   $@
 }
 
-if ! type -p goveralls; then
-  v go install github.com/mattn/goveralls
-fi
-
-if ! type -p goreturns; then
-  v go install github.com/sqs/goreturns
-fi
-
-v go test -v ./...
-
 v go test -v -covermode=count -coverprofile=cover.out .
-go tool cover -func=cover.out
-[ -z "$COVERALLS_TOKEN" ] || goveralls -coverprofile=cover.out -service=travis-ci -repotoken $COVERALLS_TOKEN || echo 'Coult not push to coveralls'
-rm cover.out
+v go test -v -covermode=count -coverprofile=echo_adapter.out ./echo_adapter
+v go test -v -covermode=count -coverprofile=gin_adapter.out ./gin_adapter
 
-v goreturns -l -w *.go */*.go
+v go tool cover -func=cover.out
+v go tool cover -func=echo_adapter.out
+v go tool cover -func=gin_adapter.out
+
+rm *.out
+
+v gofmt -l -w *.go */*.go
 
 v go vet ./...
