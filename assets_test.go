@@ -88,9 +88,10 @@ func TestChooseResourceDirListingIsNotAllowed(t *testing.T) {
 		maxAge       time.Duration
 		method, url  string
 		cacheControl string
+		body         int
 	}{
-		{maxAge: 1, method: "GET", url: "/css/", cacheControl: "public, max-age=1"},
-		{maxAge: 1, method: "HEAD", url: "/css/", cacheControl: "public, max-age=1"},
+		{maxAge: 1, method: "GET", url: "/css/", cacheControl: "public, max-age=1", body: 14},
+		{maxAge: 1, method: "HEAD", url: "/css/", cacheControl: "public, max-age=1", body: 0},
 	}
 
 	for i, test := range cases {
@@ -106,7 +107,7 @@ func TestChooseResourceDirListingIsNotAllowed(t *testing.T) {
 		isEqual(t, len(w.Header()["Expires"]), 0, i)
 		isEqual(t, len(w.Header()["Cache-Control"]), 0, i)
 		isEqual(t, len(w.Header()["Etag"]), 0, i)
-		isEqual(t, w.Body.Len() > 10, true, i)
+		isEqual(t, w.Body.Len(), test.body, i)
 	}
 }
 
@@ -116,11 +117,12 @@ func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 		maxAge             time.Duration
 		method, url        string
 		path, cacheControl string
+		body               int
 		disable            bool
 	}{
-		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1", disable: true},
-		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1"},
-		{maxAge: 1, method: "HEAD", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1"},
+		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1", body: 36, disable: true},
+		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1", body: 36},
+		{maxAge: 1, method: "HEAD", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1", body: 0},
 	}
 
 	for i, test := range cases {
@@ -133,13 +135,13 @@ func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusMovedPermanently, i)
+		isEqual(t, w.Code, http.StatusOK, i)
 		isEqual(t, len(w.Header()["Expires"]), 1, i)
 		isGte(t, len(w.Header()["Expires"][0]), 25, i)
 		//fmt.Println(headers["Expires"])
 		isEqual(t, w.Header()["Cache-Control"], []string{test.cacheControl}, i)
 		isEqual(t, w.Header()["Etag"], []string{etag}, i)
-		isEqual(t, w.Body.Len(), 0, i)
+		isEqual(t, w.Body.Len(), test.body, i)
 	}
 }
 
@@ -369,7 +371,9 @@ func (h *h4xx) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(h.code)
-	w.Write([]byte("<html>foo</html>"))
+	if r.Method != http.MethodHead {
+		w.Write([]byte("<html>foo</html>"))
+	}
 }
 
 func Test405Handling(t *testing.T) {

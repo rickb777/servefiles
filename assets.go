@@ -245,13 +245,26 @@ func removeTrailingSlash(name string) string {
 	return name
 }
 
+func httpError(w http.ResponseWriter, code code, method string) {
+	if method == http.MethodHead {
+		w.WriteHeader(int(code))
+	} else {
+		http.Error(w, code.String(), int(code))
+	}
+}
+
 func (a *Assets) chooseResource(wHeader http.Header, req *http.Request, resource string) (string, code) {
 	Debugf("Assets chooseResource %s %s %s\n", req.Method, req.URL.Path, resource)
 
 	if strings.HasSuffix(resource, "/") {
 		indexPath, indexCode := a.chooseResource(wHeader, req, resource+IndexPage)
 		if indexCode == Continue {
-			return indexPath, indexCode
+			if strings.HasSuffix(indexPath, "/"+IndexPage) {
+				// needed because http.FileServer causes redirection in this case
+				return resource, indexCode
+			} else {
+				return indexPath, indexCode
+			}
 		} else if a.DisableDirListing {
 			delete(wHeader, "Expires")
 			delete(wHeader, "Cache-Control")
@@ -329,7 +342,7 @@ func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if a.MethodNotAllowed != nil {
 			a.MethodNotAllowed.ServeHTTP(w, req)
 		} else {
-			http.Error(w, MethodNotAllowed.String(), int(MethodNotAllowed))
+			httpError(w, MethodNotAllowed, req.Method)
 		}
 		return
 	}
@@ -345,7 +358,7 @@ func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if code >= 400 {
 		Debugf("Assets ServeHTTP (error %d) %s %s R:%+v W:%+v\n", code, req.Method, req.URL.Path, req.Header, w.Header())
-		http.Error(w, code.String(), int(code))
+		httpError(w, code, req.Method)
 		return
 	}
 
