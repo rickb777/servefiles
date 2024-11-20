@@ -56,23 +56,25 @@ const (
 
 func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 	cases := []struct {
-		n                       int
-		maxAge                  time.Duration
-		url, path, cacheControl string
+		n                  int
+		maxAge             time.Duration
+		method, url        string
+		path, cacheControl string
 	}{
-		{0, 1, "/", "assets/index.html", "public, max-age=1"},
+		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1"},
+		{maxAge: 1, method: "HEAD", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1"},
 	}
 
 	for i, test := range cases {
 		etag := etagFor(test.path)
 		url := mustUrl(test.url)
-		request := &http.Request{Method: "GET", URL: url}
+		request := &http.Request{Method: test.method, URL: url}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		w := httptest.NewRecorder()
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 301, i)
+		isEqual(t, w.Code, http.StatusMovedPermanently, i)
 		//isEqual(t, message, "", test.path)
 		isEqual(t, len(w.Header()["Expires"]), 1, i)
 		isGte(t, len(w.Header()["Expires"][0]), 25, i)
@@ -85,32 +87,35 @@ func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 
 func TestChooseResourceSimpleNoGzip(t *testing.T) {
 	cases := []struct {
-		n                       int
-		maxAge                  time.Duration
-		url, path, cacheControl string
+		n                  int
+		maxAge             time.Duration
+		method, url        string
+		path, cacheControl string
+		body               int
 	}{
-		{0, 1, "/img/sort_asc.png", "assets/img/sort_asc.png", "public, max-age=1"},
-		{0, 3671, "/img/sort_asc.png", "assets/img/sort_asc.png", "public, max-age=3671"},
-		{3, 3671, "/x/y/z/img/sort_asc.png", "assets/img/sort_asc.png", "public, max-age=3671"},
+		{maxAge: 1, method: "GET", url: "/img/sort_asc.png", path: "assets/img/sort_asc.png", cacheControl: "public, max-age=1", body: 160},
+		{maxAge: 3671, method: "GET", url: "/img/sort_asc.png", path: "assets/img/sort_asc.png", cacheControl: "public, max-age=3671", body: 160},
+		{n: 3, maxAge: 3671, method: "GET", url: "/x/y/z/img/sort_asc.png", path: "assets/img/sort_asc.png", cacheControl: "public, max-age=3671", body: 160},
+		{n: 3, maxAge: 3671, method: "HEAD", url: "/x/y/z/img/sort_asc.png", path: "assets/img/sort_asc.png", cacheControl: "public, max-age=3671", body: 0},
 	}
 
 	for i, test := range cases {
 		etag := etagFor(test.path)
 		url := mustUrl(test.url)
-		request := &http.Request{Method: "GET", URL: url}
+		request := &http.Request{Method: test.method, URL: url}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		w := httptest.NewRecorder()
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 200, i)
+		isEqual(t, w.Code, http.StatusOK, i)
 		//isEqual(t, message, "", test.path)
 		isEqual(t, len(w.Header()["Expires"]), 1, i)
 		isGte(t, len(w.Header()["Expires"][0]), 25, i)
 		//fmt.Println(headers["Expires"])
 		isEqual(t, w.Header()["Cache-Control"], []string{test.cacheControl}, i)
 		isEqual(t, w.Header()["Etag"], []string{etag}, i)
-		isEqual(t, w.Body.Len(), 160, i)
+		isEqual(t, w.Body.Len(), test.body, i)
 	}
 }
 
@@ -133,7 +138,7 @@ func TestChooseResourceSimpleNonExistent(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 404, i)
+		isEqual(t, w.Code, http.StatusNotFound, i)
 		//t.Logf("header %v", w.Header())
 		isGte(t, len(w.Header()), 4, i)
 		isEqual(t, w.Header().Get("Content-Type"), "text/plain; charset=utf-8", i)
@@ -164,7 +169,7 @@ func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 200, test.path)
+		isEqual(t, w.Code, http.StatusOK, test.path)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
 		isGte(t, len(headers), 7, test.path)
@@ -201,7 +206,7 @@ func TestServeHTTP200WithBrAndBrWithAcceptHeader(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 200, test.path)
+		isEqual(t, w.Code, http.StatusOK, test.path)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
 		isGte(t, len(headers), 7, test.path)
@@ -238,7 +243,7 @@ func TestServeHTTP200WithGzipButNoAcceptHeader(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 200, test.path)
+		isEqual(t, w.Code, http.StatusOK, test.path)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
 		isGte(t, len(headers), 6, test.path)
@@ -282,7 +287,7 @@ func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 200, test.path)
+		isEqual(t, w.Code, http.StatusOK, test.path)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
 		isGte(t, len(headers), 6, test.path)
@@ -298,33 +303,64 @@ func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 
 //-------------------------------------------------------------------------------------------------
 
-type h404 struct{}
+type h4xx struct{ code int }
 
-func (h *h404) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *h4xx) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if len(w.Header()) > 0 {
+		panic(fmt.Sprintf("still holding headers %+v", w.Header()))
+	}
 	w.Header().Set("Content-Type", "text/html")
-	w.WriteHeader(404)
+	w.WriteHeader(h.code)
 	w.Write([]byte("<html>foo</html>"))
 }
 
-func Test404Handler(t *testing.T) {
+func Test405Handling(t *testing.T) {
 	cases := []struct {
-		path, conType, response string
-		notFound                http.Handler
+		method, path      string
+		conType, response string
+		notAllowed        http.Handler
 	}{
-		{"/img/nonexisting.png", "text/plain; charset=utf-8", "404 Not found\n", nil},
-		{"/img/nonexisting.png", "text/html", "<html>foo</html>", &h404{}},
+		{method: "POST", path: "/img/nonexisting.png", conType: "text/html", response: "<html>foo</html>", notAllowed: &h4xx{code: 405}},
+		{method: "POST", path: "/img/nonexisting.png", conType: "text/plain; charset=utf-8", response: "405 Method Not Allowed\n"},
+		{method: "PUT", path: "/img/nonexisting.png", conType: "text/plain; charset=utf-8", response: "405 Method Not Allowed\n"},
+		{method: "DELETE", path: "/img/nonexisting.png", conType: "text/plain; charset=utf-8", response: "405 Method Not Allowed\n"},
 	}
 
 	for i, test := range cases {
 		url := mustUrl("" + test.path)
-		request := &http.Request{Method: "GET", URL: url}
+		request := &http.Request{Method: test.method, URL: url}
+		a := NewAssetHandler("./assets/").WithMethodNotAllowed(test.notAllowed)
+		isEqual(t, a.MethodNotAllowed, test.notAllowed, i)
+		w := httptest.NewRecorder()
+
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, http.StatusMethodNotAllowed, i)
+		isEqual(t, w.Header().Get("Content-Type"), test.conType, i)
+		isEqual(t, w.Body.String(), test.response, i)
+	}
+}
+
+func Test404Handling(t *testing.T) {
+	cases := []struct {
+		method, path      string
+		conType, response string
+		notFound          http.Handler
+	}{
+		{method: "GET", path: "/img/nonexisting.png", conType: "text/html", response: "<html>foo</html>", notFound: &h4xx{code: 404}},
+		{method: "GET", path: "/img/nonexisting.png", conType: "text/plain; charset=utf-8", response: "404 Not found\n"},
+	}
+
+	for i, test := range cases {
+		url := mustUrl("" + test.path)
+		request := &http.Request{Method: test.method, URL: url}
 		a := NewAssetHandler("./assets/").WithNotFound(test.notFound)
 		isEqual(t, a.NotFound, test.notFound, i)
 		w := httptest.NewRecorder()
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 404, i)
+		isEqual(t, w.Code, http.StatusNotFound, i)
 		isEqual(t, w.Header().Get("Content-Type"), test.conType, i)
 		isEqual(t, w.Body.String(), test.response, i)
 	}
@@ -335,8 +371,8 @@ func Test403Handling(t *testing.T) {
 		path   string
 		header http.Header
 	}{
-		{"/css/style1.css", newHeader()},
-		{"/css/style1.css", newHeader("Accept-Encoding", "gzip")},
+		{path: "/css/style1.css", header: newHeader()},
+		{path: "/css/style1.css", header: newHeader("Accept-Encoding", "gzip")},
 	}
 
 	for i, test := range cases {
@@ -347,7 +383,7 @@ func Test403Handling(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 403, i)
+		isEqual(t, w.Code, http.StatusForbidden, i)
 		isEqual(t, w.Header().Get("Content-Type"), "text/plain; charset=utf-8", i)
 		isEqual(t, w.Body.String(), "403 Forbidden\n", i)
 	}
@@ -358,8 +394,8 @@ func Test503Handling(t *testing.T) {
 		path   string
 		header http.Header
 	}{
-		{"/css/style1.css", newHeader()},
-		{"/css/style1.css", newHeader("Accept-Encoding", "gzip")},
+		{path: "/css/style1.css", header: newHeader()},
+		{path: "/css/style1.css", header: newHeader("Accept-Encoding", "gzip")},
 	}
 
 	for i, test := range cases {
@@ -370,7 +406,7 @@ func Test503Handling(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 503, i)
+		isEqual(t, w.Code, http.StatusServiceUnavailable, i)
 		isEqual(t, w.Header().Get("Content-Type"), "text/plain; charset=utf-8", i)
 		isNotEqual(t, w.Header().Get("Retry-After"), "", i)
 		isEqual(t, w.Body.String(), "503 Service unavailable\n", i)
@@ -384,21 +420,21 @@ func TestServeHTTP304(t *testing.T) {
 		url, path, encoding string
 		notFound            http.Handler
 	}{
-		{"/css/style1.css", "assets/css/style1.css.gz", "gzip", nil},
-		{"/css/style1.css", "assets/css/style1.css.br", "br", nil},
-		{"/css/style2.css", "assets/css/style2.css", "xx", nil},
-		{"/img/sort_asc.png", "assets/img/sort_asc.png", "xx", nil},
-		{"/js/script1.js", "assets/js/script1.js.gz", "gzip", nil},
-		{"/js/script1.js", "assets/js/script1.js.br", "br", nil},
-		{"/js/script2.js", "assets/js/script2.js", "xx", nil},
+		{url: "/css/style1.css", path: "assets/css/style1.css.gz", encoding: "gzip"},
+		{url: "/css/style1.css", path: "assets/css/style1.css.br", encoding: "br"},
+		{url: "/css/style2.css", path: "assets/css/style2.css", encoding: "xx"},
+		{url: "/img/sort_asc.png", path: "assets/img/sort_asc.png", encoding: "xx"},
+		{url: "/js/script1.js", path: "assets/js/script1.js.gz", encoding: "gzip"},
+		{url: "/js/script1.js", path: "assets/js/script1.js.br", encoding: "br"},
+		{url: "/js/script2.js", path: "assets/js/script2.js", encoding: "xx"},
 
-		{"/css/style1.css", "assets/css/style1.css.gz", "gzip", &h404{}},
-		{"/css/style1.css", "assets/css/style1.css.br", "br", &h404{}},
-		{"/css/style2.css", "assets/css/style2.css", "xx", &h404{}},
-		{"/img/sort_asc.png", "assets/img/sort_asc.png", "xx", &h404{}},
-		{"/js/script1.js", "assets/js/script1.js.gz", "gzip", &h404{}},
-		{"/js/script1.js", "assets/js/script1.js.br", "br", &h404{}},
-		{"/js/script2.js", "assets/js/script2.js", "xx", &h404{}},
+		{url: "/css/style1.css", path: "assets/css/style1.css.gz", encoding: "gzip", notFound: &h4xx{code: 404}},
+		{url: "/css/style1.css", path: "assets/css/style1.css.br", encoding: "br", notFound: &h4xx{code: 404}},
+		{url: "/css/style2.css", path: "assets/css/style2.css", encoding: "xx", notFound: &h4xx{code: 404}},
+		{url: "/img/sort_asc.png", path: "assets/img/sort_asc.png", encoding: "xx", notFound: &h4xx{code: 404}},
+		{url: "/js/script1.js", path: "assets/js/script1.js.gz", encoding: "gzip", notFound: &h4xx{code: 404}},
+		{url: "/js/script1.js", path: "assets/js/script1.js.br", encoding: "br", notFound: &h4xx{code: 404}},
+		{url: "/js/script2.js", path: "assets/js/script2.js", encoding: "xx", notFound: &h4xx{code: 404}},
 	}
 
 	// net/http serveFiles handles conditional requests according to RFC9110 specs.
@@ -414,7 +450,7 @@ func TestServeHTTP304(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, 304, i)
+		isEqual(t, w.Code, http.StatusNotModified, i)
 		isEqual(t, request.URL.Path, test.url, i)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)

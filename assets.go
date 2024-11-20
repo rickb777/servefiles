@@ -57,6 +57,10 @@ type Assets struct {
 	// http.NotFound is used.
 	NotFound http.Handler
 
+	// Configurable http.Handler which is called when the request method is neither HEAD nor GET. If it is not
+	// set a basic handler like http.NotFound is used.
+	MethodNotAllowed http.Handler
+
 	// the local filesystem (remember that all paths are relative to its root)
 	fs               fs.FS
 	server           http.Handler
@@ -131,6 +135,16 @@ func (a Assets) WithMaxAge(maxAge time.Duration) *Assets {
 // The returned handler is a new copy of the original one.
 func (a Assets) WithNotFound(notFound http.Handler) *Assets {
 	a.NotFound = notFound
+	return &a
+}
+
+// WithMethodNotAllowed alters the handler so that 405-method not allowed cases are passed
+// to a specified handler. Without this, the default handler is like the one provided in the
+// net/http package (see http.NotFound).
+//
+// The returned handler is a new copy of the original one.
+func (a Assets) WithMethodNotAllowed(notAllowed http.Handler) *Assets {
+	a.MethodNotAllowed = notAllowed
 	return &a
 }
 
@@ -269,7 +283,7 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 	// no intervention; the file will be served normally by the standard api
 	fd := a.checkResource(resource, header)
 
-	if fd.code > 0 {
+	if 0 < fd.code && fd.code < 300 {
 		// strong etag because the representation is the original file
 		header.Set("ETag", calculateEtag(fd.fi))
 	}
@@ -283,15 +297,22 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 // all the standard logic paths implemented there, including conditional
 // requests and content negotiation.
 func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodHead && req.Method != http.MethodGet {
+		// use the provided not-found handler
+		Debugf("Assets ServeHTTP (method not allowed) %s %s R:%+v W:%+v\n", req.Method, req.URL.Path, req.Header, w.Header())
+		if a.MethodNotAllowed != nil {
+			a.MethodNotAllowed.ServeHTTP(w, req)
+		} else {
+			http.Error(w, MethodNotAllowed.String(), int(MethodNotAllowed))
+		}
+		return
+	}
+
 	resource, code := a.chooseResource(w.Header(), req)
 
 	if code == NotFound && a.NotFound != nil {
 		// use the provided not-found handler
 		Debugf("Assets ServeHTTP (not found) %s %s R:%+v W:%+v\n", req.Method, req.URL.Path, req.Header, w.Header())
-
-		// ww has silently dropped the headers and body from the built-in handler in this case,
-		// so complete the response using the original handler.
-		w.Header().Set("X-Content-Type-Options", "nosniff")
 		a.NotFound.ServeHTTP(w, req)
 		return
 	}

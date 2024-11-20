@@ -47,6 +47,7 @@ const (
 	//NotModified        code = 304
 	Forbidden          code = 403
 	NotFound           code = 404
+	MethodNotAllowed   code = 405
 	ServiceUnavailable code = 503
 )
 
@@ -62,6 +63,8 @@ func (code code) String() string {
 		return "403 Forbidden"
 	case NotFound:
 		return "404 Not found"
+	case MethodNotAllowed:
+		return "405 Method Not Allowed"
 	case ServiceUnavailable:
 		return "503 Service unavailable"
 	}
