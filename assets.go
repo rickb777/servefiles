@@ -40,7 +40,7 @@ import (
 )
 
 // This needs to track the same string in net/http (which is unlikely ever to change)
-const indexPage = "index.html"
+const IndexPage = "index.html"
 
 // Assets sets the options for asset handling. Use AssetHandler to create the handler(s) you need.
 type Assets struct {
@@ -60,6 +60,12 @@ type Assets struct {
 	// Configurable http.Handler which is called when the request method is neither HEAD nor GET. If it is not
 	// set a basic handler like http.NotFound is used.
 	MethodNotAllowed http.Handler
+
+	// DisableDirListing prevents directory listings being generated with the URL path ends with '/'.
+	// If an index.html file is present, it is served for its directory path regardless of this setting.
+	// Otherwise, a directory listing page will be generated if this flag is false, or when it is true
+	// a 404-not found is given.
+	DisableDirListing bool
 
 	// the local filesystem (remember that all paths are relative to its root)
 	fs               fs.FS
@@ -190,14 +196,14 @@ func calculateEtag(fi os.FileInfo) string {
 	return fmt.Sprintf(`"%x-%x"`, fi.ModTime().Unix(), fi.Size())
 }
 
-func handleSaturatedServer(header http.Header, resource string, err error) fileData {
+func handleSaturatedServer(wHeader http.Header, resource string) fileData {
 	// Possibly the server is under heavy load and ran out of file descriptors
 	backoff := 2 + rand.Int31()%4 // 2–6 seconds to prevent a stampede
-	header.Set("Retry-After", strconv.Itoa(int(backoff)))
+	wHeader.Set("Retry-After", strconv.Itoa(int(backoff)))
 	return fileData{resource, ServiceUnavailable, nil}
 }
 
-func (a *Assets) checkResource(resource string, header http.Header) fileData {
+func (a *Assets) checkResource(resource string, wHeader http.Header) fileData {
 	d, err := fs.Stat(a.fs, removeLeadingSlash(resource))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -212,7 +218,7 @@ func (a *Assets) checkResource(resource string, header http.Header) fileData {
 		}
 
 		Debugf("Assets handleSaturatedServer 503 %s\n", resource)
-		return handleSaturatedServer(header, resource, err)
+		return handleSaturatedServer(wHeader, resource)
 	}
 
 	if d.IsDir() {
@@ -231,33 +237,49 @@ func removeLeadingSlash(name string) string {
 	return name
 }
 
-func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, code) {
-	resource := path.Drop(req.URL.Path, a.UnwantedPrefixSegments)
-	if strings.HasSuffix(resource, "/") {
-		resource += indexPage
+func removeTrailingSlash(name string) string {
+	last := len(name) - 1
+	if len(name) > 0 && name[last] == '/' {
+		name = name[:last]
 	}
+	return name
+}
+
+func (a *Assets) chooseResource(wHeader http.Header, req *http.Request, resource string) (string, code) {
 	Debugf("Assets chooseResource %s %s %s\n", req.Method, req.URL.Path, resource)
 
+	if strings.HasSuffix(resource, "/") {
+		indexPath, indexCode := a.chooseResource(wHeader, req, resource+IndexPage)
+		if indexCode == Continue {
+			return indexPath, indexCode
+		} else if a.DisableDirListing {
+			delete(wHeader, "Expires")
+			delete(wHeader, "Cache-Control")
+			return indexPath, indexCode
+		}
+		resource = removeTrailingSlash(resource)
+	}
+
 	if a.MaxAge > 0 {
-		header.Set("Expires", a.expires())
-		header.Set("Cache-Control", fmt.Sprintf("public, max-age=%d", a.MaxAge/time.Second))
+		wHeader.Set("Expires", a.expires())
+		wHeader.Set("Cache-Control", fmt.Sprintf("public, max-age=%d", a.MaxAge/time.Second))
 	}
 
 	acceptEncoding := commaSeparatedList(req.Header.Get("Accept-Encoding"))
 	if acceptEncoding.Contains("br") {
 		brotli := resource + ".br"
 
-		fdbr := a.checkResource(brotli, header)
+		fdbr := a.checkResource(brotli, wHeader)
 
 		if fdbr.code == Continue {
 			ext := filepath.Ext(resource)
-			header.Set("Content-Type", mime.TypeByExtension(ext))
+			wHeader.Set("Content-Type", mime.TypeByExtension(ext))
 			// the standard library sometimes overrides the content type via sniffing
-			header.Set("X-Content-Type-Options", "nosniff")
-			header.Set("Content-Encoding", "br")
-			header.Add("Vary", "Accept-Encoding")
+			wHeader.Set("X-Content-Type-Options", "nosniff")
+			wHeader.Set("Content-Encoding", "br")
+			wHeader.Add("Vary", "Accept-Encoding")
 			// weak etag because the representation is not the original file but a compressed variant
-			header.Set("ETag", "W/"+calculateEtag(fdbr.fi))
+			wHeader.Set("ETag", "W/"+calculateEtag(fdbr.fi))
 			return brotli, Continue
 		}
 	}
@@ -265,27 +287,31 @@ func (a *Assets) chooseResource(header http.Header, req *http.Request) (string, 
 	if acceptEncoding.Contains("gzip") {
 		gzipped := resource + ".gz"
 
-		fdgz := a.checkResource(gzipped, header)
+		fdgz := a.checkResource(gzipped, wHeader)
 
 		if fdgz.code == Continue {
 			ext := filepath.Ext(resource)
-			header.Set("Content-Type", mime.TypeByExtension(ext))
+			wHeader.Set("Content-Type", mime.TypeByExtension(ext))
 			// the standard library sometimes overrides the content type via sniffing
-			header.Set("X-Content-Type-Options", "nosniff")
-			header.Set("Content-Encoding", "gzip")
-			header.Add("Vary", "Accept-Encoding")
+			wHeader.Set("X-Content-Type-Options", "nosniff")
+			wHeader.Set("Content-Encoding", "gzip")
+			wHeader.Add("Vary", "Accept-Encoding")
 			// weak etag because the representation is not the original file but a compressed variant
-			header.Set("ETag", "W/"+calculateEtag(fdgz.fi))
+			wHeader.Set("ETag", "W/"+calculateEtag(fdgz.fi))
 			return gzipped, Continue
 		}
 	}
 
 	// no intervention; the file will be served normally by the standard api
-	fd := a.checkResource(resource, header)
+	fd := a.checkResource(resource, wHeader)
 
-	if 0 < fd.code && fd.code < 300 {
+	if fd.code == Directory {
+		// add trailing slash because we stripped it above and it allows the
+		// standard file handler to create a directory listing
+		fd.resource += "/"
+	} else if fd.code < 300 {
 		// strong etag because the representation is the original file
-		header.Set("ETag", calculateEtag(fd.fi))
+		wHeader.Set("ETag", calculateEtag(fd.fi))
 	}
 
 	return fd.resource, fd.code
@@ -308,7 +334,7 @@ func (a *Assets) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	resource, code := a.chooseResource(w.Header(), req)
+	resource, code := a.chooseResource(w.Header(), req, path.Drop(req.URL.Path, a.UnwantedPrefixSegments))
 
 	if code == NotFound && a.NotFound != nil {
 		// use the provided not-found handler

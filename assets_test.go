@@ -54,13 +54,71 @@ const (
 	javascriptMimeType = "text/javascript; charset=utf-8"
 )
 
+func TestChooseResourceDirListingIsAllowed(t *testing.T) {
+	cases := []struct {
+		n            int
+		maxAge       time.Duration
+		method, url  string
+		cacheControl string
+	}{
+		{maxAge: 1, method: "GET", url: "/css/", cacheControl: "public, max-age=1"},
+		{maxAge: 1, method: "HEAD", url: "/css/", cacheControl: "public, max-age=1"},
+	}
+
+	for i, test := range cases {
+		url := mustUrl(test.url)
+		request := &http.Request{Method: test.method, URL: url}
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
+		a.DisableDirListing = false
+		w := httptest.NewRecorder()
+
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, http.StatusOK, i)
+		isEqual(t, len(w.Header()["Expires"]), 1, i)
+		isEqual(t, w.Header()["Cache-Control"], []string{test.cacheControl}, i)
+		isEqual(t, len(w.Header()["Etag"]), 0, i)
+		isEqual(t, w.Body.Len() > 10, true, i)
+	}
+}
+
+func TestChooseResourceDirListingIsNotAllowed(t *testing.T) {
+	cases := []struct {
+		n            int
+		maxAge       time.Duration
+		method, url  string
+		cacheControl string
+	}{
+		{maxAge: 1, method: "GET", url: "/css/", cacheControl: "public, max-age=1"},
+		{maxAge: 1, method: "HEAD", url: "/css/", cacheControl: "public, max-age=1"},
+	}
+
+	for i, test := range cases {
+		url := mustUrl(test.url)
+		request := &http.Request{Method: test.method, URL: url}
+		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
+		a.DisableDirListing = true
+		w := httptest.NewRecorder()
+
+		a.ServeHTTP(w, request)
+
+		isEqual(t, w.Code, http.StatusNotFound, i)
+		isEqual(t, len(w.Header()["Expires"]), 0, i)
+		isEqual(t, len(w.Header()["Cache-Control"]), 0, i)
+		isEqual(t, len(w.Header()["Etag"]), 0, i)
+		isEqual(t, w.Body.Len() > 10, true, i)
+	}
+}
+
 func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 	cases := []struct {
 		n                  int
 		maxAge             time.Duration
 		method, url        string
 		path, cacheControl string
+		disable            bool
 	}{
+		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1", disable: true},
 		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1"},
 		{maxAge: 1, method: "HEAD", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1"},
 	}
@@ -70,12 +128,12 @@ func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 		url := mustUrl(test.url)
 		request := &http.Request{Method: test.method, URL: url}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
+		a.DisableDirListing = test.disable
 		w := httptest.NewRecorder()
 
 		a.ServeHTTP(w, request)
 
 		isEqual(t, w.Code, http.StatusMovedPermanently, i)
-		//isEqual(t, message, "", test.path)
 		isEqual(t, len(w.Header()["Expires"]), 1, i)
 		isGte(t, len(w.Header()["Expires"][0]), 25, i)
 		//fmt.Println(headers["Expires"])
