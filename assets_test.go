@@ -119,16 +119,21 @@ func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 		path, cacheControl string
 		body               int
 		disable            bool
+		rHeaderKV          []string
 	}{
 		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1", body: 36, disable: true},
 		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1", body: 36},
+		{maxAge: 1, method: "GET", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1", body: 60, rHeaderKV: []string{"Accept-Encoding", "gzip"}},
 		{maxAge: 1, method: "HEAD", url: "/", path: "assets/index.html", cacheControl: "public, max-age=1", body: 0},
 	}
 
 	for i, test := range cases {
 		etag := etagFor(test.path)
-		url := mustUrl(test.url)
-		request := &http.Request{Method: test.method, URL: url}
+		request, _ := http.NewRequest(test.method, test.url, nil)
+		for i := 1; i < len(test.rHeaderKV); i += 2 {
+			request.Header.Set(test.rHeaderKV[i-1], test.rHeaderKV[i])
+			etag = "W/" + etagFor(test.path+".gz")
+		}
 		a := NewAssetHandler("./assets/").StripOff(test.n).WithMaxAge(test.maxAge * time.Second)
 		a.DisableDirListing = test.disable
 		w := httptest.NewRecorder()
