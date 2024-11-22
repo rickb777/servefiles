@@ -1,0 +1,68 @@
+Linux 6.11.0-9-generic x86_64 GNU/Linux
+go version go1.23.3 linux/amd64
+goos: linux
+goarch: amd64
+pkg: github.com/rickb777/servefiles/v3
+cpu: Intel(R) Core(TM) i7-14700K
+Benchmark/css/style1.css~gzip~no-etag~200~0s-28         	  176164	      7698 ns/op	    2063 B/op	      34 allocs/op
+Benchmark/css/style1.css~gzip~no-etag~200~1h0m0s-28     	  108751	     10247 ns/op	    3212 B/op	      39 allocs/op
+Benchmark/css/style1.css~br~no-etag~200~0s-28           	  146322	      7894 ns/op	    2031 B/op	      34 allocs/op
+Benchmark/css/style1.css~br~no-etag~200~1h0m0s-28       	  125169	     10232 ns/op	    3180 B/op	      39 allocs/op
+Benchmark/a/css/style1.css~gzip~no-etag~200~0s-28       	  147751	      8118 ns/op	    2063 B/op	      34 allocs/op
+Benchmark/a/css/style1.css~gzip~no-etag~200~1h0m0s-28   	  112988	     10477 ns/op	    3212 B/op	      39 allocs/op
+Benchmark/a/css/style1.css~br~no-etag~200~0s-28         	  158698	      7858 ns/op	    2031 B/op	      34 allocs/op
+Benchmark/a/css/style1.css~br~no-etag~200~1h0m0s-28     	  110228	     11017 ns/op	    3180 B/op	      39 allocs/op
+Benchmark/a/b/css/style1.css~gzip~no-etag~200~0s-28     	  160888	      7708 ns/op	    2063 B/op	      34 allocs/op
+Benchmark/a/b/css/style1.css~gzip~no-etag~200~1h0m0s-28 	   97959	     10271 ns/op	    3212 B/op	      39 allocs/op
+Benchmark/a/b/css/style1.css~br~no-etag~200~0s-28       	  169140	      7583 ns/op	    2031 B/op	      34 allocs/op
+Benchmark/a/b/css/style1.css~br~no-etag~200~1h0m0s-28   	  128398	     11194 ns/op	    3180 B/op	      39 allocs/op
+Benchmark/a/b/css/style1.css~xxxx~no-etag~200~0s-28     	  165322	      7285 ns/op	    1910 B/op	      30 allocs/op
+Benchmark/a/b/css/style1.css~xxxx~no-etag~200~1h0m0s-28 	  164446	      7348 ns/op	    1999 B/op	      34 allocs/op
+Benchmark/a/b/css/style1.css~gzip~etag~304~0s-28        	  188625	      6028 ns/op	    1830 B/op	      30 allocs/op
+Benchmark/a/b/css/style1.css~gzip~etag~304~1h0m0s-28    	  183487	      6656 ns/op	    1918 B/op	      34 allocs/op
+Benchmark/a/b/css/style1.css~br~etag~304~0s-28          	  174140	      6650 ns/op	    1830 B/op	      30 allocs/op
+Benchmark/a/b/css/style1.css~br~etag~304~1h0m0s-28      	  158353	      7564 ns/op	    1918 B/op	      34 allocs/op
+Benchmark/a/b/css/style1.css~xxxx~etag~304~0s-28        	  184828	      6023 ns/op	    1678 B/op	      24 allocs/op
+Benchmark/a/b/css/style1.css~xxxx~etag~304~1h0m0s-28    	  196650	      6473 ns/op	    1766 B/op	      28 allocs/op
+Benchmark/a/b/css/style2.css~gzip~no-etag~200~0s-28     	  123486	      8931 ns/op	    2263 B/op	      35 allocs/op
+Benchmark/a/b/css/style2.css~gzip~no-etag~200~1h0m0s-28 	  140763	      9405 ns/op	    2351 B/op	      39 allocs/op
+Benchmark/a/b/css/style2.css~xxxx~no-etag~200~0s-28     	  145080	      7494 ns/op	    1927 B/op	      30 allocs/op
+Benchmark/a/b/css/style2.css~xxxx~no-etag~200~1h0m0s-28 	  148760	      8389 ns/op	    2015 B/op	      34 allocs/op
+Benchmark/a/b/css/style2.css~gzip~etag~304~0s-28        	  188731	      6853 ns/op	    2014 B/op	      29 allocs/op
+Benchmark/a/b/css/style2.css~gzip~etag~304~1h0m0s-28    	  190634	      7305 ns/op	    2102 B/op	      33 allocs/op
+Benchmark/a/a/css/style2.css~xxxx~etag~304~0s-28        	  205650	      5938 ns/op	    1678 B/op	      24 allocs/op
+Benchmark/a/a/css/style2.css~xxxx~etag~304~1h0m0s-28    	  199178	      6116 ns/op	    1766 B/op	      28 allocs/op
+Benchmark/a/b/js/script1.js~gzip~no-etag~200~0s-28      	  156196	      7712 ns/op	    2047 B/op	      34 allocs/op
+Benchmark/a/b/js/script1.js~gzip~no-etag~200~1h0m0s-28  	  149755	      9384 ns/op	    3196 B/op	      39 allocs/op
+Benchmark/a/b/js/script1.js~br~no-etag~200~0s-28        	  156694	      7387 ns/op	    2007 B/op	      34 allocs/op
+Benchmark/a/b/js/script1.js~br~no-etag~200~1h0m0s-28    	  139138	     10153 ns/op	    3156 B/op	      39 allocs/op
+Benchmark/a/b/js/script1.js~xxxx~no-etag~200~0s-28      	  153944	      7909 ns/op	    1902 B/op	      30 allocs/op
+Benchmark/a/b/js/script1.js~xxxx~no-etag~200~1h0m0s-28  	  150841	      7840 ns/op	    1991 B/op	      34 allocs/op
+Benchmark/a/b/js/script1.js~gzip~etag~304~0s-28         	  164493	      6349 ns/op	    1814 B/op	      30 allocs/op
+Benchmark/a/b/js/script1.js~gzip~etag~304~1h0m0s-28     	  170286	      6911 ns/op	    1902 B/op	      34 allocs/op
+Benchmark/a/b/js/script1.js~br~etag~304~0s-28           	  165908	      6390 ns/op	    1814 B/op	      30 allocs/op
+Benchmark/a/b/js/script1.js~br~etag~304~1h0m0s-28       	  173960	      6728 ns/op	    1902 B/op	      34 allocs/op
+Benchmark/a/a/js/script1.js~xxxx~etag~304~0s-28         	  214164	      5536 ns/op	    1678 B/op	      24 allocs/op
+Benchmark/a/a/js/script1.js~xxxx~etag~304~1h0m0s-28     	  178062	      6183 ns/op	    1766 B/op	      28 allocs/op
+Benchmark/a/b/js/script2.js~gzip~no-etag~200~0s-28      	  140648	      8155 ns/op	    2231 B/op	      35 allocs/op
+Benchmark/a/b/js/script2.js~gzip~no-etag~200~1h0m0s-28  	  112813	      8916 ns/op	    2319 B/op	      39 allocs/op
+Benchmark/a/b/js/script2.js~xxxx~no-etag~200~0s-28      	  140432	      8067 ns/op	    1902 B/op	      30 allocs/op
+Benchmark/a/b/js/script2.js~xxxx~no-etag~200~1h0m0s-28  	  136934	      7859 ns/op	    1991 B/op	      34 allocs/op
+Benchmark/a/b/js/script2.js~gzip~etag~304~0s-28         	  171846	      6917 ns/op	    2006 B/op	      29 allocs/op
+Benchmark/a/b/js/script2.js~gzip~etag~304~1h0m0s-28     	  147182	      7872 ns/op	    2095 B/op	      33 allocs/op
+Benchmark/a/a/js/script2.js~xxxx~etag~304~0s-28         	  197433	      5916 ns/op	    1678 B/op	      24 allocs/op
+Benchmark/a/a/js/script2.js~xxxx~etag~304~1h0m0s-28     	  202376	      6312 ns/op	    1766 B/op	      28 allocs/op
+Benchmark/a/b/img/sort_asc.png~gzip~no-etag~200~0s-28   	  140384	      9032 ns/op	    2480 B/op	      36 allocs/op
+Benchmark/a/b/img/sort_asc.png~gzip~no-etag~200~1h0m0s-28         	  129823	      8958 ns/op	    2568 B/op	      40 allocs/op
+Benchmark/a/b/img/sort_asc.png~xxxx~no-etag~200~0s-28             	  135061	      7886 ns/op	    2135 B/op	      31 allocs/op
+Benchmark/a/b/img/sort_asc.png~xxxx~no-etag~200~1h0m0s-28         	  144762	      8451 ns/op	    2223 B/op	      35 allocs/op
+Benchmark/a/b/img/sort_asc.png~gzip~etag~304~0s-28                	  173412	      6750 ns/op	    2022 B/op	      29 allocs/op
+Benchmark/a/b/img/sort_asc.png~gzip~etag~304~1h0m0s-28            	  156661	      7003 ns/op	    2110 B/op	      33 allocs/op
+Benchmark/a/a/img/sort_asc.png~xxxx~etag~304~0s-28                	  211023	      6019 ns/op	    1678 B/op	      24 allocs/op
+Benchmark/a/a/img/sort_asc.png~xxxx~etag~304~1h0m0s-28            	  179408	      6348 ns/op	    1766 B/op	      28 allocs/op
+Benchmark/a/b/img/nonexisting.png~gzip~no-etag~404~0s-28          	  434560	      2806 ns/op	    1726 B/op	      23 allocs/op
+Benchmark/a/b/img/nonexisting.png~gzip~no-etag~404~1h0m0s-28      	  369997	      3302 ns/op	    1814 B/op	      27 allocs/op
+Benchmark/a/b/img/nonexisting.png~xxxx~no-etag~404~0s-28          	  605824	      2001 ns/op	    1381 B/op	      18 allocs/op
+Benchmark/a/b/img/nonexisting.png~xxxx~no-etag~404~1h0m0s-28      	  522142	      2327 ns/op	    1470 B/op	      22 allocs/op
+PASS
+ok  	github.com/rickb777/servefiles/v3	346.316s
