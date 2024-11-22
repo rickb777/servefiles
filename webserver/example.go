@@ -28,18 +28,16 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"github.com/rickb777/servefiles/v3"
 	"log"
 	"net/http"
-	"time"
-
-	"github.com/rickb777/servefiles/v3"
 )
 
 var path = flag.String("path", "..", "directory for the files tp be served")
 var cert = flag.String("cert", "", "file containing the certificate (optional)")
 var key = flag.String("key", "", "file containing the private key (optional)")
 var port = flag.Int("port", 8080, "TCP port to listen on")
-var maxAge = flag.String("maxage", "", "Maximum age of assets sent in response headers - causes client caching")
+var maxAge = flag.Duration("maxage", 0, "Maximum age of assets sent in response headers, which causes client caching (e.g. 7m30s)")
 var verbose = flag.Bool("v", false, "Enable verbose messages")
 
 func main() {
@@ -56,10 +54,8 @@ func main() {
 
 	h := servefiles.NewAssetHandler(*path)
 
-	if *maxAge != "" {
-		d, err := time.ParseDuration(*maxAge)
-		log.Printf("MaxAge: %s %v\n", d, err)
-		h = h.WithMaxAge(d)
+	if *maxAge != 0 {
+		h = h.WithMaxAge(*maxAge)
 	}
 
 	srv := &http.Server{

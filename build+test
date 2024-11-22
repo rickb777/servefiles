@@ -29,3 +29,5 @@ rm *.out
 v gofmt -l -w *.go */*.go
 
 v go vet ./...
+
+v go build -o simple-webserver ./webserver

@@ -28,3 +28,4 @@ _testmain.go
 v3/.idea/
 reports/
 .DS_Store/
+/simple-webserver

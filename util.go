@@ -22,14 +22,26 @@
 
 package servefiles
 
-import "strings"
+import (
+	"net/http"
+	"slices"
+	"strings"
+)
 
-type commaSeparatedList string
+func commaSeparatedList(s string) List[string] {
+	parts := strings.Split(s, ",")
+	list := make(List[string], len(parts))
+	for i, part := range parts {
+		list[i] = strings.TrimSpace(part)
+	}
+	return list
+}
 
-func (list commaSeparatedList) Contains(wanted string) bool {
-	parts := strings.Split(string(list), ",")
-	for _, part := range parts {
-		if strings.TrimSpace(part) == wanted {
+type List[T comparable] []T
+
+func (list List[T]) Contains(wanted T) bool {
+	for _, part := range list {
+		if part == wanted {
 			return true
 		}
 	}
@@ -41,10 +53,8 @@ func (list commaSeparatedList) Contains(wanted string) bool {
 type code int
 
 const (
-	Directory code = 0
-	Continue  code = 100
-	//OK                 code = 200
-	//NotModified        code = 304
+	Directory          code = 0
+	OK                 code = 200
 	Forbidden          code = 403
 	NotFound           code = 404
 	MethodNotAllowed   code = 405
@@ -53,12 +63,8 @@ const (
 
 func (code code) String() string {
 	switch code {
-	case Continue:
-		return "100 Continue"
-	//case OK:
-	//	return "200 OK"
-	//case NotModified:
-	//	return "304 Not modified"
+	case OK:
+		return "200 OK"
 	case Forbidden:
 		return "403 Forbidden"
 	case NotFound:
@@ -69,4 +75,30 @@ func (code code) String() string {
 		return "503 Service unavailable"
 	}
 	panic(code)
+}
+
+//-------------------------------------------------------------------------------------------------
+
+// headerStringer makes debug output clearer, without imposing a performance hit if debugging
+// is not enabled.
+type headerStringer http.Header
+
+func (h headerStringer) String() string {
+	keys := make([]string, 0, len(h))
+	for k := range h {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	buf := &strings.Builder{}
+	buf.WriteString("[")
+	spacer := ""
+	for _, k := range keys {
+		buf.WriteString(spacer)
+		buf.WriteString(k)
+		buf.WriteString(": ")
+		buf.WriteString(strings.Join(h[k], ", "))
+		spacer = ". "
+	}
+	buf.WriteString("]")
+	return buf.String()
 }
