@@ -15,6 +15,18 @@ import (
 	"github.com/rickb777/path"
 )
 
+const (
+	AcceptEncoding      = "Accept-Encoding"
+	CacheControl        = "Cache-Control"
+	ContentEncoding     = "Content-Encoding"
+	ContentType         = "Content-Type"
+	ETag                = "ETag"
+	Expires             = "Expires"
+	RetryAfter          = "Retry-After"
+	Vary                = "Vary"
+	xContentTypeOptions = "X-Content-Type-Options"
+)
+
 //-------------------------------------------------------------------------------------------------
 
 // Calculate the 'Expires' value using an approximation that reduces unimportant re-calculation.
@@ -67,31 +79,8 @@ func calculateEtag(fi os.FileInfo) string {
 func handleSaturatedServer(wHeader http.Header, resource string) fileData {
 	// Possibly the server is under heavy load and ran out of file descriptors
 	backoff := 2 + rand.IntN(4) // 2–6 seconds to prevent a stampede
-	wHeader.Set("Retry-After", strconv.Itoa(int(backoff)))
+	wHeader.Set(RetryAfter, strconv.Itoa(int(backoff)))
 	return fileData{resource, ServiceUnavailable, nil}
-}
-
-func (a *Assets) checkResource(resource string, wHeader http.Header) fileData {
-	d, err := fs.Stat(a.fs, removeLeadingSlash(resource))
-	if err != nil {
-		if os.IsNotExist(err) {
-			// gzipped does not exist; original might but this gets checked later
-			return fileData{"", NotFound, nil}
-
-		} else if os.IsPermission(err) {
-			// incorrectly assembled gzipped asset is treated as an error
-			return fileData{resource, Forbidden, nil}
-		}
-
-		return handleSaturatedServer(wHeader, resource)
-	}
-
-	if d.IsDir() {
-		// directory edge case is simply passed on to the standard library
-		return fileData{resource, Directory, nil}
-	}
-
-	return fileData{resource, OK, d}
 }
 
 func removeLeadingSlash(name string) string {
@@ -117,6 +106,33 @@ func httpError(w http.ResponseWriter, code code, method string) {
 	}
 }
 
+//-------------------------------------------------------------------------------------------------
+
+func (a *Assets) checkResource(resource string, wHeader http.Header) fileData {
+	d, err := fs.Stat(a.fs, removeLeadingSlash(resource))
+	if err != nil {
+		if os.IsNotExist(err) {
+			// gzipped does not exist; original might but this gets checked later
+			return fileData{"", NotFound, nil}
+
+		} else if os.IsPermission(err) {
+			// incorrectly assembled gzipped asset is treated as an error
+			return fileData{resource, Forbidden, nil}
+		}
+
+		return handleSaturatedServer(wHeader, resource)
+	}
+
+	if d.IsDir() {
+		// directory edge case is simply passed on to the standard library
+		return fileData{resource, Directory, nil}
+	}
+
+	return fileData{resource, OK, d}
+}
+
+//-------------------------------------------------------------------------------------------------
+
 func (a *Assets) chooseResource(wHeader http.Header, req *http.Request, resource string) (string, code) {
 
 	if strings.HasSuffix(resource, "/") {
@@ -129,19 +145,19 @@ func (a *Assets) chooseResource(wHeader http.Header, req *http.Request, resource
 				return indexPath, indexCode
 			}
 		} else if a.DisableDirListing {
-			delete(wHeader, "Expires")
-			delete(wHeader, "Cache-Control")
+			delete(wHeader, Expires)
+			delete(wHeader, CacheControl)
 			return indexPath, indexCode
 		}
 		resource = removeTrailingSlash(resource)
 	}
 
 	if a.MaxAge > 0 {
-		wHeader.Set("Expires", a.expires())
-		wHeader.Set("Cache-Control", fmt.Sprintf("public, max-age=%d", a.maxAgeS))
+		wHeader.Set(Expires, a.expires())
+		wHeader.Set(CacheControl, fmt.Sprintf("public, max-age=%d", a.maxAgeS))
 	}
 
-	acceptEncoding := commaSeparatedList(req.Header.Get("Accept-Encoding"))
+	acceptEncoding := commaSeparatedList(req.Header.Get(AcceptEncoding))
 
 	if acceptEncoding.Contains("br") {
 		brotli := resource + ".br"
@@ -150,13 +166,13 @@ func (a *Assets) chooseResource(wHeader http.Header, req *http.Request, resource
 
 		if fdbr.code == OK {
 			ext := filepath.Ext(resource)
-			wHeader.Set("Content-Type", mime.TypeByExtension(ext))
+			wHeader.Set(ContentType, mime.TypeByExtension(ext))
 			// the standard library sometimes overrides the content type via sniffing
-			wHeader.Set("X-Content-Type-Options", "nosniff")
-			wHeader.Set("Content-Encoding", "br")
-			wHeader.Add("Vary", "Accept-Encoding")
+			wHeader.Set(xContentTypeOptions, "nosniff")
+			wHeader.Set(ContentEncoding, "br")
+			wHeader.Add(Vary, AcceptEncoding)
 			// weak etag because the representation is not the original file but a compressed variant
-			wHeader.Set("ETag", "W/"+calculateEtag(fdbr.fi))
+			wHeader.Set(ETag, "W/"+calculateEtag(fdbr.fi))
 			return brotli, OK
 		}
 	}
@@ -168,13 +184,13 @@ func (a *Assets) chooseResource(wHeader http.Header, req *http.Request, resource
 
 		if fdgz.code == OK {
 			ext := filepath.Ext(resource)
-			wHeader.Set("Content-Type", mime.TypeByExtension(ext))
+			wHeader.Set(ContentType, mime.TypeByExtension(ext))
 			// the standard library sometimes overrides the content type via sniffing
-			wHeader.Set("X-Content-Type-Options", "nosniff")
-			wHeader.Set("Content-Encoding", "gzip")
-			wHeader.Add("Vary", "Accept-Encoding")
+			wHeader.Set(xContentTypeOptions, "nosniff")
+			wHeader.Set(ContentEncoding, "gzip")
+			wHeader.Add(Vary, AcceptEncoding)
 			// weak etag because the representation is not the original file but a compressed variant
-			wHeader.Set("ETag", "W/"+calculateEtag(fdgz.fi))
+			wHeader.Set(ETag, "W/"+calculateEtag(fdgz.fi))
 			return gzipped, OK
 		}
 	}
@@ -188,11 +204,13 @@ func (a *Assets) chooseResource(wHeader http.Header, req *http.Request, resource
 		fd.resource += "/"
 	} else if fd.code < 300 {
 		// strong etag because the representation is the original file
-		wHeader.Set("ETag", calculateEtag(fd.fi))
+		wHeader.Set(ETag, calculateEtag(fd.fi))
 	}
 
 	return fd.resource, fd.code
 }
+
+//-------------------------------------------------------------------------------------------------
 
 // ServeHTTP implements the http.Handler interface. Note that it (a) handles
 // headers for compression, expiry etc, and then (b) calls the standard

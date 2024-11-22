@@ -374,7 +374,7 @@ func (h *h4xx) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(w.Header()) > 0 {
 		panic(fmt.Sprintf("still holding headers %+v", w.Header()))
 	}
-	w.Header().Set("Content-Type", "text/html")
+	w.Header().Set(ContentType, "text/html")
 	w.WriteHeader(h.code)
 	if r.Method != http.MethodHead {
 		w.Write([]byte("<html>foo</html>"))
