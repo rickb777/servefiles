@@ -1,6 +1,7 @@
 package servefiles
 
 import (
+	"github.com/rickb777/expect"
 	"net/http"
 	"testing"
 )
@@ -10,5 +11,5 @@ func TestHeaderStringer(t *testing.T) {
 	h.Set(ContentEncoding, "br")
 	h.Set(Vary, AcceptEncoding)
 	s := headerStringer(h).String()
-	isEqual(t, s, "[Content-Encoding: br. Vary: Accept-Encoding]", 0)
+	expect.String(s).ToBe(t, "[Content-Encoding: br. Vary: Accept-Encoding]")
 }

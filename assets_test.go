@@ -24,11 +24,11 @@ package servefiles
 
 import (
 	"fmt"
+	"github.com/rickb777/expect"
 	"net/http"
 	"net/http/httptest"
 	. "net/url"
 	"os"
-	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -74,11 +74,11 @@ func TestChooseResourceDirListingIsAllowed(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusOK, i)
-		isEqual(t, len(w.Header()["Expires"]), 1, i)
-		isEqual(t, w.Header()["Cache-Control"], []string{test.cacheControl}, i)
-		isEqual(t, len(w.Header()["Etag"]), 0, i)
-		isEqual(t, w.Body.Len() > 10, true, i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusOK)
+		expect.Slice(w.Header()["Expires"]).Info(i).ToHaveLength(t, 1)
+		expect.Slice(w.Header()["Cache-Control"]).Info(i).ToBe(t, test.cacheControl)
+		expect.Slice(w.Header()["Etag"]).Info(i).ToBeEmpty(t)
+		expect.Number(w.Body.Len()).Info(i).ToBeGreaterThan(t, 10)
 	}
 }
 
@@ -103,11 +103,11 @@ func TestChooseResourceDirListingIsNotAllowed(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusNotFound, i)
-		isEqual(t, len(w.Header()["Expires"]), 0, i)
-		isEqual(t, len(w.Header()["Cache-Control"]), 0, i)
-		isEqual(t, len(w.Header()["Etag"]), 0, i)
-		isEqual(t, w.Body.Len(), test.body, i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusNotFound)
+		expect.Slice(w.Header()["Expires"]).Info(i).ToBeEmpty(t)
+		expect.Slice(w.Header()["Cache-Control"]).Info(i).ToBeEmpty(t)
+		expect.Slice(w.Header()["Etag"]).Info(i).ToBeEmpty(t)
+		expect.Number(w.Body.Len()).Info(i).ToBe(t, test.body)
 	}
 }
 
@@ -140,13 +140,13 @@ func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusOK, i)
-		isEqual(t, len(w.Header()["Expires"]), 1, i)
-		isGte(t, len(w.Header()["Expires"][0]), 25, i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusOK)
+		expect.Slice(w.Header()["Expires"]).Info(i).ToHaveLength(t, 1)
+		expect.Number(len(w.Header()["Expires"][0])).Info(i).ToBeGreaterThanOrEqualTo(t, 25)
 		//fmt.Println(headers["Expires"])
-		isEqual(t, w.Header()["Cache-Control"], []string{test.cacheControl}, i)
-		isEqual(t, w.Header()["Etag"], []string{etag}, i)
-		isEqual(t, w.Body.Len(), test.body, i)
+		expect.Slice(w.Header()["Cache-Control"]).Info(i).ToBe(t, test.cacheControl)
+		expect.Slice(w.Header()["Etag"]).Info(i).ToBe(t, etag)
+		expect.Number(w.Body.Len()).Info(i).ToBe(t, test.body)
 	}
 }
 
@@ -173,14 +173,13 @@ func TestChooseResourceSimpleNoGzip(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusOK, i)
-		//isEqual(t, message, "", test.path)
-		isEqual(t, len(w.Header()["Expires"]), 1, i)
-		isGte(t, len(w.Header()["Expires"][0]), 25, i)
-		//fmt.Println(headers["Expires"])
-		isEqual(t, w.Header()["Cache-Control"], []string{test.cacheControl}, i)
-		isEqual(t, w.Header()["Etag"], []string{etag}, i)
-		isEqual(t, w.Body.Len(), test.body, i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusOK)
+		//expect.String(message).Info(i).ToBe(t, "")
+		expect.Slice(w.Header()["Expires"]).Info(i).ToHaveLength(t, 1)
+		expect.Number(len(w.Header()["Expires"][0])).Info(i).ToBeGreaterThanOrEqualTo(t, 25)
+		expect.Slice(w.Header()["Cache-Control"]).Info(i).ToBe(t, test.cacheControl)
+		expect.Slice(w.Header()["Etag"]).Info(i).ToBe(t, etag)
+		expect.Number(w.Body.Len()).Info(i).ToBe(t, test.body)
 	}
 }
 
@@ -203,12 +202,12 @@ func TestChooseResourceSimpleNonExistent(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusNotFound, i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusNotFound)
 		//t.Logf("header %v", w.Header())
-		isGte(t, len(w.Header()), 4, i)
-		isEqual(t, w.Header().Get("Content-Type"), "text/plain; charset=utf-8", i)
-		isEqual(t, w.Header().Get("Cache-Control"), "public, max-age=1", i)
-		isGte(t, len(w.Header().Get("Expires")), 25, i)
+		expect.Map(w.Header()).Info(i).ToHaveLength(t, 4)
+		expect.String(w.Header().Get("Content-Type")).Info(i).ToBe(t, "text/plain; charset=utf-8")
+		expect.String(w.Header().Get("Cache-Control")).Info(i).ToBe(t, "public, max-age=1")
+		expect.Number(len(w.Header().Get("Expires"))).Info(i).ToBeGreaterThanOrEqualTo(t, 25)
 	}
 }
 
@@ -234,18 +233,18 @@ func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusOK, test.path)
+		expect.Number(w.Code).Info(test.path).ToBe(t, http.StatusOK)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		isGte(t, len(headers), 7, test.path)
-		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
-		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
-		isEqual(t, headers["X-Content-Type-Options"], []string{"nosniff"}, test.path)
-		isEqual(t, headers["Content-Encoding"], []string{"gzip"}, test.path)
-		isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, test.path)
-		isEqual(t, headers["Etag"], []string{"W/" + etag}, test.path)
-		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGte(t, len(headers["Expires"][0]), 25, test.path)
+		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqualTo(t, 7)
+		expect.Slice(headers["Cache-Control"]).Info(test.path).ToBe(t, test.cacheControl)
+		expect.Slice(headers["Content-Type"]).Info(test.path).ToBe(t, test.mime)
+		expect.Slice(headers["X-Content-Type-Options"]).Info(test.path).ToBe(t, "nosniff")
+		expect.Slice(headers["Content-Encoding"]).Info(test.path).ToBe(t, "gzip")
+		expect.Slice(headers["Vary"]).Info(test.path).ToBe(t, "Accept-Encoding")
+		expect.Slice(headers["Etag"]).Info(test.path).ToBe(t, "W/"+etag)
+		expect.Slice(headers["Expires"]).Info(test.path).ToHaveLength(t, 1)
+		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqualTo(t, 25)
 	}
 }
 
@@ -271,18 +270,18 @@ func TestServeHTTP200WithBrAndBrWithAcceptHeader(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusOK, test.path)
+		expect.Number(w.Code).Info(test.path).ToBe(t, http.StatusOK)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		isGte(t, len(headers), 7, test.path)
-		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
-		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
-		isEqual(t, headers["X-Content-Type-Options"], []string{"nosniff"}, test.path)
-		isEqual(t, headers["Content-Encoding"], []string{"br"}, test.path)
-		isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, test.path)
-		isEqual(t, headers["Etag"], []string{"W/" + etag}, test.path)
-		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGte(t, len(headers["Expires"][0]), 25, test.path)
+		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqualTo(t, 7)
+		expect.Slice(headers["Cache-Control"]).Info(test.path).ToBe(t, test.cacheControl)
+		expect.Slice(headers["Content-Type"]).Info(test.path).ToBe(t, test.mime)
+		expect.Slice(headers["X-Content-Type-Options"]).Info(test.path).ToBe(t, "nosniff")
+		expect.Slice(headers["Content-Encoding"]).Info(test.path).ToBe(t, "br")
+		expect.Slice(headers["Vary"]).Info(test.path).ToBe(t, "Accept-Encoding")
+		expect.Slice(headers["Etag"]).Info(test.path).ToBe(t, "W/"+etag)
+		expect.Slice(headers["Expires"]).Info(test.path).ToHaveLength(t, 1)
+		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqualTo(t, 25)
 	}
 }
 
@@ -308,17 +307,17 @@ func TestServeHTTP200WithGzipButNoAcceptHeader(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusOK, test.path)
+		expect.Number(w.Code).Info(test.path).ToBe(t, http.StatusOK)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		isGte(t, len(headers), 6, test.path)
-		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
-		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
-		isEqual(t, headers["Content-Encoding"], emptyStrings, test.path)
-		isEqual(t, headers["Vary"], emptyStrings, test.path)
-		isEqual(t, headers["Etag"], []string{etag}, test.path)
-		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGte(t, len(headers["Expires"][0]), 25, test.path)
+		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqualTo(t, 6)
+		expect.Slice(headers["Cache-Control"]).Info(test.path).ToBe(t, test.cacheControl)
+		expect.Slice(headers["Content-Type"]).Info(test.path).ToBe(t, test.mime)
+		expect.Slice(headers["Content-Encoding"]).Info(test.path).ToBeEmpty(t)
+		expect.Slice(headers["Vary"]).Info(test.path).ToBeEmpty(t)
+		expect.Slice(headers["Etag"]).Info(test.path).ToBe(t, etag)
+		expect.Slice(headers["Expires"]).Info(test.path).ToHaveLength(t, 1)
+		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqualTo(t, 25)
 	}
 }
 
@@ -352,17 +351,17 @@ func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusOK, test.path)
+		expect.Number(w.Code).Info(test.path).ToBe(t, http.StatusOK)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		isGte(t, len(headers), 6, test.path)
-		isEqual(t, headers["Cache-Control"], []string{test.cacheControl}, test.path)
-		isEqual(t, headers["Content-Type"], []string{test.mime}, test.path)
-		isEqual(t, headers["Content-Encoding"], emptyStrings, test.path)
-		isEqual(t, headers["Vary"], emptyStrings, test.path)
-		isEqual(t, headers["Etag"], []string{etag}, test.path)
-		isEqual(t, len(headers["Expires"]), 1, test.path)
-		isGte(t, len(headers["Expires"][0]), 25, test.path)
+		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqualTo(t, 6)
+		expect.Slice(headers["Cache-Control"]).Info(test.path).ToBe(t, test.cacheControl)
+		expect.Slice(headers["Content-Type"]).Info(test.path).ToBe(t, test.mime)
+		expect.Slice(headers["Content-Encoding"]).Info(test.path).ToBeEmpty(t)
+		expect.Slice(headers["Vary"]).Info(test.path).ToBeEmpty(t)
+		expect.Slice(headers["Etag"]).Info(test.path).ToBe(t, etag)
+		expect.Slice(headers["Expires"]).Info(test.path).ToHaveLength(t, 1)
+		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqualTo(t, 25)
 	}
 }
 
@@ -397,14 +396,14 @@ func Test405Handling(t *testing.T) {
 		url := mustUrl("" + test.path)
 		request := &http.Request{Method: test.method, URL: url}
 		a := NewAssetHandler("./assets/").WithMethodNotAllowed(test.notAllowed)
-		isEqual(t, a.MethodNotAllowed, test.notAllowed, i)
+		expect.Any(a.MethodNotAllowed).Info(i).ToBe(t, test.notAllowed)
 		w := httptest.NewRecorder()
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusMethodNotAllowed, i)
-		isEqual(t, w.Header().Get("Content-Type"), test.conType, i)
-		isEqual(t, w.Body.String(), test.response, i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusMethodNotAllowed)
+		expect.String(w.Header().Get("Content-Type")).Info(i).ToBe(t, test.conType)
+		expect.String(w.Body.String()).Info(i).ToBe(t, test.response)
 	}
 }
 
@@ -422,14 +421,14 @@ func Test404Handling(t *testing.T) {
 		url := mustUrl("" + test.path)
 		request := &http.Request{Method: test.method, URL: url}
 		a := NewAssetHandler("./assets/").WithNotFound(test.notFound)
-		isEqual(t, a.NotFound, test.notFound, i)
+		expect.Any(a.NotFound).Info(i).ToBe(t, test.notFound)
 		w := httptest.NewRecorder()
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusNotFound, i)
-		isEqual(t, w.Header().Get("Content-Type"), test.conType, i)
-		isEqual(t, w.Body.String(), test.response, i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusNotFound)
+		expect.String(w.Header().Get("Content-Type")).Info(i).ToBe(t, test.conType)
+		expect.String(w.Body.String()).Info(i).ToBe(t, test.response)
 	}
 }
 
@@ -450,9 +449,9 @@ func Test403Handling(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusForbidden, i)
-		isEqual(t, w.Header().Get("Content-Type"), "text/plain; charset=utf-8", i)
-		isEqual(t, w.Body.String(), "403 Forbidden\n", i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusForbidden)
+		expect.String(w.Header().Get("Content-Type")).Info(i).ToBe(t, "text/plain; charset=utf-8")
+		expect.String(w.Body.String()).Info(i).ToBe(t, "403 Forbidden\n")
 	}
 }
 
@@ -473,10 +472,10 @@ func Test503Handling(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusServiceUnavailable, i)
-		isEqual(t, w.Header().Get("Content-Type"), "text/plain; charset=utf-8", i)
-		isNotEqual(t, w.Header().Get("Retry-After"), "", i)
-		isEqual(t, w.Body.String(), "503 Service unavailable\n", i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusServiceUnavailable)
+		expect.String(w.Header().Get("Content-Type")).Info(i).ToBe(t, "text/plain; charset=utf-8")
+		expect.String(w.Header().Get("Retry-After")).Info(i).Not().ToBe(t, "")
+		expect.String(w.Body.String()).Info(i).ToBe(t, "503 Service unavailable\n")
 	}
 }
 
@@ -517,24 +516,24 @@ func TestServeHTTP304(t *testing.T) {
 
 		a.ServeHTTP(w, request)
 
-		isEqual(t, w.Code, http.StatusNotModified, i)
-		isEqual(t, request.URL.Path, test.url, i)
+		expect.Number(w.Code).Info(i).ToBe(t, http.StatusNotModified)
+		expect.String(request.URL.Path).Info(i).ToBe(t, test.url)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		isGte(t, len(headers), 1, i)
-		isEqual(t, headers["Cache-Control"], emptyStrings, i)
-		isEqual(t, headers["Content-Type"], emptyStrings, i)
-		isEqual(t, headers["Content-Length"], emptyStrings, i)
-		isEqual(t, headers["Content-Encoding"], emptyStrings, i)
+		expect.Number(len(headers), 1, i)
+		expect.Slice(headers["Cache-Control"]).Info(i).ToBeEmpty(t)
+		expect.Slice(headers["Content-Type"]).Info(i).ToBeEmpty(t)
+		expect.Slice(headers["Content-Length"]).Info(i).ToBeEmpty(t)
+		expect.Slice(headers["Content-Encoding"]).Info(i).ToBeEmpty(t)
 		if strings.HasSuffix(test.path, ".gz") {
-			isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, i)
-			isEqual(t, headers["Etag"], []string{"W/" + etag}, i)
+			expect.Slice(headers["Vary"]).Info(i).ToBe(t, "Accept-Encoding")
+			expect.Slice(headers["Etag"]).Info(i).ToBe(t, "W/"+etag)
 		} else if strings.HasSuffix(test.path, ".br") {
-			isEqual(t, headers["Vary"], []string{"Accept-Encoding"}, i)
-			isEqual(t, headers["Etag"], []string{"W/" + etag}, i)
+			expect.Slice(headers["Vary"]).Info(i).ToBe(t, "Accept-Encoding")
+			expect.Slice(headers["Etag"]).Info(i).ToBe(t, "W/"+etag)
 		} else {
-			isEqual(t, headers["Vary"], emptyStrings, i)
-			isEqual(t, headers["Etag"], []string{etag}, i)
+			expect.Slice(headers["Vary"]).Info(i).ToBeEmpty(t)
+			expect.Slice(headers["Etag"]).Info(i).ToBe(t, etag)
 		}
 	}
 }
@@ -622,27 +621,6 @@ func Benchmark(t *testing.B) {
 }
 
 //-------------------------------------------------------------------------------------------------
-
-func isEqual(t *testing.T, a, b, hint interface{}) {
-	t.Helper()
-	if !reflect.DeepEqual(a, b) {
-		t.Errorf("Got %#v; expected %#v - for %v\n", a, b, hint)
-	}
-}
-
-func isNotEqual(t *testing.T, a, b, hint interface{}) {
-	t.Helper()
-	if reflect.DeepEqual(a, b) {
-		t.Errorf("Got %#v; expected something else - for %v\n", a, hint)
-	}
-}
-
-func isGte(t *testing.T, a, b int, hint interface{}) {
-	t.Helper()
-	if a < b {
-		t.Errorf("Got %d; expected at least %d - for %v\n", a, b, hint)
-	}
-}
 
 func mustUrl(s string) *URL {
 	parsed, err := Parse(s)

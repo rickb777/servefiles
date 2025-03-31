@@ -30,10 +30,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rickb777/servefiles/v3/afero2"
-
 	"github.com/gin-gonic/gin"
-	. "github.com/onsi/gomega"
+	"github.com/rickb777/expect"
+	"github.com/rickb777/servefiles/v3/afero2"
 	"github.com/rickb777/servefiles/v3/gin_adapter"
 	"github.com/rickb777/servefiles/v3/testdata"
 	"github.com/spf13/afero"
@@ -78,8 +77,6 @@ func ExampleHandlerFunc() {
 }
 
 func TestHandlerAferoFunc(t *testing.T) {
-	g := NewGomegaWithT(t)
-
 	maxAge := time.Hour
 	files := afero2.AferoAdapter{Inner: afero.NewMemMapFs()}
 	files.MkdirAll("/foo/bar", 0755)
@@ -102,36 +99,34 @@ func TestHandlerAferoFunc(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
-	g.Expect(w.Code).To(Equal(200))
-	g.Expect(w.Header().Get("Content-Type")).To(Equal("text/plain; charset=utf-8"))
-	g.Expect(w.Header().Get("Expires")).NotTo(Equal(""))
-	g.Expect(w.Body.Len()).To(Equal(5))
+	expect.Number(w.Code).ToBe(t, 200)
+	expect.String(w.Header().Get("Content-Type")).ToBe(t, "text/plain; charset=utf-8")
+	expect.String(w.Header().Get("Expires")).Not().ToBe(t, "")
+	expect.Number(w.Body.Len()).ToBe(t, 5)
 
 	r, _ = http.NewRequest(http.MethodHead, "http://localhost/files/101/foo/bar/x.txt", nil)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
-	g.Expect(w.Code).To(Equal(200))
-	g.Expect(w.Header().Get("Content-Type")).To(Equal("text/plain; charset=utf-8"))
-	g.Expect(w.Header().Get("Expires")).NotTo(Equal(""))
-	g.Expect(w.Body.Len()).To(Equal(0))
+	expect.Number(w.Code).ToBe(t, 200)
+	expect.String(w.Header().Get("Content-Type")).ToBe(t, "text/plain; charset=utf-8")
+	expect.String(w.Header().Get("Expires")).Not().ToBe(t, "")
+	expect.Number(w.Body.Len()).ToBe(t, 0)
 
 	r, _ = http.NewRequest(http.MethodHead, "http://localhost/files/101/foo/baz.png", nil)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
-	g.Expect(w.Code).To(Equal(404))
+	expect.Number(w.Code).ToBe(t, 404)
 }
 
 func TestHandlerFunc_with_EmbedFS(t *testing.T) {
-	g := NewGomegaWithT(t)
-
 	maxAge := time.Hour
 
 	const assetPath = "/files/*filepath"
 
 	sub, err := fs.Sub(testdata.TestDataFS, "assets")
-	g.Expect(err).NotTo(HaveOccurred())
+	expect.Error(err).Not().ToHaveOccurred(t)
 
 	h := gin_adapter.NewAssetHandlerIoFS(sub).
 		WithMaxAge(maxAge).
@@ -148,23 +143,23 @@ func TestHandlerFunc_with_EmbedFS(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
-	g.Expect(w.Code).To(Equal(200))
-	g.Expect(w.Header().Get("Content-Type")).To(Equal(javascriptMimeType))
-	g.Expect(w.Header().Get("Expires")).NotTo(Equal(""))
-	g.Expect(w.Body.Len()).To(Equal(19))
+	expect.Number(w.Code).ToBe(t, 200)
+	expect.String(w.Header().Get("Content-Type")).ToBe(t, javascriptMimeType)
+	expect.String(w.Header().Get("Expires")).Not().ToBe(t, "")
+	expect.Number(w.Body.Len()).ToBe(t, 19)
 
 	r, _ = http.NewRequest(http.MethodHead, "http://localhost/files/101/js/script1.js", nil)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
-	g.Expect(w.Code).To(Equal(200))
-	g.Expect(w.Header().Get("Content-Type")).To(Equal(javascriptMimeType))
-	g.Expect(w.Header().Get("Expires")).NotTo(Equal(""))
-	g.Expect(w.Body.Len()).To(Equal(0))
+	expect.Number(w.Code).ToBe(t, 200)
+	expect.String(w.Header().Get("Content-Type")).ToBe(t, javascriptMimeType)
+	expect.String(w.Header().Get("Expires")).Not().ToBe(t, "")
+	expect.Number(w.Body.Len()).ToBe(t, 0)
 
 	r, _ = http.NewRequest(http.MethodHead, "http://localhost/files/101/img/baz.png", nil)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
-	g.Expect(w.Code).To(Equal(404))
+	expect.Number(w.Code).ToBe(t, 404)
 }
