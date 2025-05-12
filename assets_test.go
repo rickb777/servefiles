@@ -142,7 +142,7 @@ func TestChooseResourceSimpleDirNoGzip(t *testing.T) {
 
 		expect.Number(w.Code).Info(i).ToBe(t, http.StatusOK)
 		expect.Slice(w.Header()["Expires"]).Info(i).ToHaveLength(t, 1)
-		expect.Number(len(w.Header()["Expires"][0])).Info(i).ToBeGreaterThanOrEqualTo(t, 25)
+		expect.Number(len(w.Header()["Expires"][0])).Info(i).ToBeGreaterThanOrEqual(t, 25)
 		//fmt.Println(headers["Expires"])
 		expect.Slice(w.Header()["Cache-Control"]).Info(i).ToBe(t, test.cacheControl)
 		expect.Slice(w.Header()["Etag"]).Info(i).ToBe(t, etag)
@@ -176,7 +176,7 @@ func TestChooseResourceSimpleNoGzip(t *testing.T) {
 		expect.Number(w.Code).Info(i).ToBe(t, http.StatusOK)
 		//expect.String(message).Info(i).ToBe(t, "")
 		expect.Slice(w.Header()["Expires"]).Info(i).ToHaveLength(t, 1)
-		expect.Number(len(w.Header()["Expires"][0])).Info(i).ToBeGreaterThanOrEqualTo(t, 25)
+		expect.Number(len(w.Header()["Expires"][0])).Info(i).ToBeGreaterThanOrEqual(t, 25)
 		expect.Slice(w.Header()["Cache-Control"]).Info(i).ToBe(t, test.cacheControl)
 		expect.Slice(w.Header()["Etag"]).Info(i).ToBe(t, etag)
 		expect.Number(w.Body.Len()).Info(i).ToBe(t, test.body)
@@ -207,7 +207,7 @@ func TestChooseResourceSimpleNonExistent(t *testing.T) {
 		expect.Map(w.Header()).Info(i).ToHaveLength(t, 4)
 		expect.String(w.Header().Get("Content-Type")).Info(i).ToBe(t, "text/plain; charset=utf-8")
 		expect.String(w.Header().Get("Cache-Control")).Info(i).ToBe(t, "public, max-age=1")
-		expect.Number(len(w.Header().Get("Expires"))).Info(i).ToBeGreaterThanOrEqualTo(t, 25)
+		expect.Number(len(w.Header().Get("Expires"))).Info(i).ToBeGreaterThanOrEqual(t, 25)
 	}
 }
 
@@ -236,7 +236,7 @@ func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		expect.Number(w.Code).Info(test.path).ToBe(t, http.StatusOK)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqualTo(t, 7)
+		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqual(t, 7)
 		expect.Slice(headers["Cache-Control"]).Info(test.path).ToBe(t, test.cacheControl)
 		expect.Slice(headers["Content-Type"]).Info(test.path).ToBe(t, test.mime)
 		expect.Slice(headers["X-Content-Type-Options"]).Info(test.path).ToBe(t, "nosniff")
@@ -244,7 +244,7 @@ func TestServeHTTP200WithGzipAndGzipWithAcceptHeader(t *testing.T) {
 		expect.Slice(headers["Vary"]).Info(test.path).ToBe(t, "Accept-Encoding")
 		expect.Slice(headers["Etag"]).Info(test.path).ToBe(t, "W/"+etag)
 		expect.Slice(headers["Expires"]).Info(test.path).ToHaveLength(t, 1)
-		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqualTo(t, 25)
+		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqual(t, 25)
 	}
 }
 
@@ -273,7 +273,7 @@ func TestServeHTTP200WithBrAndBrWithAcceptHeader(t *testing.T) {
 		expect.Number(w.Code).Info(test.path).ToBe(t, http.StatusOK)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqualTo(t, 7)
+		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqual(t, 7)
 		expect.Slice(headers["Cache-Control"]).Info(test.path).ToBe(t, test.cacheControl)
 		expect.Slice(headers["Content-Type"]).Info(test.path).ToBe(t, test.mime)
 		expect.Slice(headers["X-Content-Type-Options"]).Info(test.path).ToBe(t, "nosniff")
@@ -281,7 +281,7 @@ func TestServeHTTP200WithBrAndBrWithAcceptHeader(t *testing.T) {
 		expect.Slice(headers["Vary"]).Info(test.path).ToBe(t, "Accept-Encoding")
 		expect.Slice(headers["Etag"]).Info(test.path).ToBe(t, "W/"+etag)
 		expect.Slice(headers["Expires"]).Info(test.path).ToHaveLength(t, 1)
-		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqualTo(t, 25)
+		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqual(t, 25)
 	}
 }
 
@@ -310,14 +310,14 @@ func TestServeHTTP200WithGzipButNoAcceptHeader(t *testing.T) {
 		expect.Number(w.Code).Info(test.path).ToBe(t, http.StatusOK)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqualTo(t, 6)
+		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqual(t, 6)
 		expect.Slice(headers["Cache-Control"]).Info(test.path).ToBe(t, test.cacheControl)
 		expect.Slice(headers["Content-Type"]).Info(test.path).ToBe(t, test.mime)
 		expect.Slice(headers["Content-Encoding"]).Info(test.path).ToBeEmpty(t)
 		expect.Slice(headers["Vary"]).Info(test.path).ToBeEmpty(t)
 		expect.Slice(headers["Etag"]).Info(test.path).ToBe(t, etag)
 		expect.Slice(headers["Expires"]).Info(test.path).ToHaveLength(t, 1)
-		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqualTo(t, 25)
+		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqual(t, 25)
 	}
 }
 
@@ -354,14 +354,14 @@ func TestServeHTTP200WithGzipAcceptHeaderButNoGzippedFile(t *testing.T) {
 		expect.Number(w.Code).Info(test.path).ToBe(t, http.StatusOK)
 		headers := w.Header()
 		//t.Logf("%+v\n", headers)
-		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqualTo(t, 6)
+		expect.Number(len(headers)).Info(test.path).ToBeGreaterThanOrEqual(t, 6)
 		expect.Slice(headers["Cache-Control"]).Info(test.path).ToBe(t, test.cacheControl)
 		expect.Slice(headers["Content-Type"]).Info(test.path).ToBe(t, test.mime)
 		expect.Slice(headers["Content-Encoding"]).Info(test.path).ToBeEmpty(t)
 		expect.Slice(headers["Vary"]).Info(test.path).ToBeEmpty(t)
 		expect.Slice(headers["Etag"]).Info(test.path).ToBe(t, etag)
 		expect.Slice(headers["Expires"]).Info(test.path).ToHaveLength(t, 1)
-		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqualTo(t, 25)
+		expect.Number(len(headers["Expires"][0])).Info(test.path).ToBeGreaterThanOrEqual(t, 25)
 	}
 }
 

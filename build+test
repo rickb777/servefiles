@@ -7,13 +7,13 @@ export GO111MODULE=on
 function announce
 {
   echo
-  echo $@
+  echo "$@"
 }
 
 function v
 {
-  announce $@
-  $@
+  announce "$@"
+  "$@"
 }
 
 v go test -v -covermode=count -coverprofile=cover.out .
