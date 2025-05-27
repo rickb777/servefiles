@@ -3,9 +3,9 @@ module github.com/rickb777/servefiles/v3
 go 1.24.1
 
 require (
-	github.com/gin-gonic/gin v1.10.0
-	github.com/labstack/echo/v4 v4.13.3
-	github.com/rickb777/expect v0.23.0
+	github.com/gin-gonic/gin v1.10.1
+	github.com/labstack/echo/v4 v4.13.4
+	github.com/rickb777/expect v0.24.0
 	github.com/rickb777/path v1.3.1
 	github.com/spf13/afero v1.14.0
 )
@@ -32,7 +32,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/rickb777/plural v1.4.4 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
-	github.com/ugorji/go/codec v1.2.12 // indirect
+	github.com/ugorji/go/codec v1.2.14 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	golang.org/x/arch v0.17.0 // indirect
