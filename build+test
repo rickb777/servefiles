@@ -1,33 +1,4 @@
-#!/bin/bash -e
-cd "$(dirname $0)"
-PATH=$HOME/go/bin:$PATH
-unset GOPATH
-export GO111MODULE=on
-
-function announce
-{
-  echo
-  echo "$@"
-}
-
-function v
-{
-  announce "$@"
-  "$@"
-}
-
-v go test -v -covermode=count -coverprofile=cover.out .
-v go test -v -covermode=count -coverprofile=echo_adapter.out ./echo_adapter
-v go test -v -covermode=count -coverprofile=gin_adapter.out ./gin_adapter
-
-v go tool cover -func=cover.out
-v go tool cover -func=echo_adapter.out
-v go tool cover -func=gin_adapter.out
-
-rm *.out
-
-v gofmt -l -w *.go */*.go
-
-v go vet ./...
-
-v go build -o simple-webserver ./webserver
+#!/bin/bash -ex
+cd "$(dirname "$0")"
+go install tool
+mage

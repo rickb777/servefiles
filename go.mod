@@ -5,6 +5,7 @@ go 1.24.1
 require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/labstack/echo/v4 v4.13.4
+	github.com/magefile/mage v1.15.0
 	github.com/rickb777/expect v1.0.0
 	github.com/rickb777/path v1.4.0
 	github.com/spf13/afero v1.15.0
@@ -50,3 +51,5 @@ require (
 	golang.org/x/tools v0.38.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 )
+
+tool github.com/magefile/mage
