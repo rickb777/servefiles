@@ -3,6 +3,7 @@
 [![GoDoc](https://img.shields.io/badge/api-Godoc-blue.svg)](https://pkg.go.dev/github.com/rickb777/servefiles)
 [![Go Report Card](https://goreportcard.com/badge/github.com/rickb777/servefiles)](https://goreportcard.com/report/github.com/rickb777/servefiles)
 [![Build](https://github.com/rickb777/servefiles/actions/workflows/go.yml/badge.svg)](https://github.com/rickb777/servefiles/actions)
+[![Coverage](https://coveralls.io/repos/github/rickb777/servefiles/badge.svg?branch=main)](https://coveralls.io/github/rickb777/servefiles?branch=main)
 [![Issues](https://img.shields.io/github/issues/rickb777/servefiles.svg)](https://github.com/rickb777/servefiles/issues)
 
 Serve static files from a Go http server, including performance-enhancing features.

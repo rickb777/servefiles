@@ -1,4 +1,5 @@
 #!/bin/bash -ex
 cd "$(dirname "$0")"
 go install tool
-mage Coverage CrossCompile DemoWebserver
+mage Build Coverage CrossCompile DemoWebserver
+cat report.out
