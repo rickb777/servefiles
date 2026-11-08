@@ -28,8 +28,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"github.com/rickb777/servefiles/v3"
+	"github.com/labstack/echo/v5"
+	"github.com/rickb777/servefiles/v4"
 	"github.com/spf13/afero"
 )
 
@@ -92,7 +92,7 @@ func (a *EchoAssets) HandlerFunc(path string) echo.HandlerFunc {
 		panic(path + ": path must end /* or be blank")
 	}
 
-	return func(c echo.Context) error {
+	return func(c *echo.Context) error {
 		req := c.Request()
 		req.URL.Path = req.URL.Path[trim:]
 		(*servefiles.Assets)(a).ServeHTTP(c.Response(), c.Request())

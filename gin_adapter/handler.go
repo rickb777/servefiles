@@ -28,7 +28,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/rickb777/servefiles/v3"
+	"github.com/rickb777/servefiles/v4"
 	"github.com/spf13/afero"
 )
 

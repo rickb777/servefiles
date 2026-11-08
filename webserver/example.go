@@ -28,9 +28,10 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
-	"github.com/rickb777/servefiles/v3"
 	"log"
 	"net/http"
+
+	"github.com/rickb777/servefiles/v4"
 )
 
 var path = flag.String("path", "..", "directory for the files tp be served")

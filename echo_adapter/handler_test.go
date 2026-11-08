@@ -30,11 +30,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/rickb777/expect"
-	"github.com/rickb777/servefiles/v3/afero2"
-	"github.com/rickb777/servefiles/v3/echo_adapter"
-	"github.com/rickb777/servefiles/v3/testdata"
+	"github.com/rickb777/servefiles/v4/afero2"
+	"github.com/rickb777/servefiles/v4/echo_adapter"
+	"github.com/rickb777/servefiles/v4/testdata"
 	"github.com/spf13/afero"
 )
 
@@ -45,7 +45,7 @@ const (
 
 func ExampleHandlerFunc() {
 	// This is a webserver using the asset handler provided by
-	// github.com/rickb777/servefiles/v3, which has enhanced
+	// github.com/rickb777/servefiles/v4, which has enhanced
 	// HTTP expiry, cache control, compression etc.
 	// 'Normal' bespoke handlers are included as needed.
 
